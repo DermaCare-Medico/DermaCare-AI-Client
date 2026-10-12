@@ -1,9 +1,5 @@
-const page = () => {
-  return (
-    <div>
-      <h1>Design your home page</h1>
-    </div>
-  );
-};
+import HeroSection from "./HeroSection";
+
+const page = () => <HeroSection />;
 
 export default page;
