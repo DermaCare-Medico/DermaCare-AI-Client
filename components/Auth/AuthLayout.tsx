@@ -14,7 +14,7 @@ function Brand() {
       <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#0F888D] shadow-sm">
         <Leaf size={27} strokeWidth={2.2} aria-hidden="true" />
       </span>
-      <span className="text-[25px] font-bold tracking-[-0.06em] text-[#163A5F]">
+      <span className="text-[25px] font-bold tracking-[-0.06em] text-white">
         DermaCare <span className="text-[#0F888D]">AI</span>
       </span>
     </Link>

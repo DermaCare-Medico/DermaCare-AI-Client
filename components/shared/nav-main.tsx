@@ -39,7 +39,10 @@ export function NavMain({
     <SidebarGroup>
       <SidebarMenu>
         {items?.map((item) => {
-          const isActive = item.isActive || pathname === item.url;
+          const isActive =
+            item.isActive ||
+            pathname === item.url ||
+            item.items?.some((subItem) => pathname === subItem.url);
 
           if (item.items && item.items.length > 0) {
             return (
@@ -55,7 +58,7 @@ export function NavMain({
                       tooltip={item.title}
                       className={`${
                         isActive
-                          ? "bg-primary text-white hover:bg-primary/80 hover:text-white "
+                          ? "bg-[#E8F5F4] text-[#0F777E] hover:bg-[#E8F5F4] hover:text-[#0F777E]"
                           : ""
                       }`}
                     >
@@ -75,7 +78,9 @@ export function NavMain({
                               )}
                               <span
                                 className={`${
-                                  pathname === subItem.url ? "text-primary" : ""
+                                  pathname === subItem.url
+                                    ? "font-semibold text-[#0F888D]"
+                                    : ""
                                 }`}
                               >
                                 {subItem.title}
@@ -99,7 +104,7 @@ export function NavMain({
                 tooltip={item.title}
                 className={`${
                   isActive
-                    ? "bg-primary text-white hover:bg-primary/90 hover:text-white"
+                    ? "bg-[#E8F5F4] text-[#0F777E] hover:bg-[#E8F5F4] hover:text-[#0F777E]"
                     : ""
                 }`}
               >
