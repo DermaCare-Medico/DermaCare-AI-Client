@@ -9,9 +9,11 @@ type Props = {
     name: string;
     label?: string;
     placeholder?: string;
+    required?: boolean;
+    minLength?: number;
 };
 
-const NPassword = ({ name, label, placeholder }: Props) => {
+const NPassword = ({ name, label, placeholder, required, minLength }: Props) => {
     const { control } = useFormContext();
     const [showPassword, setShowPassword] = useState(false);
 
@@ -29,6 +31,8 @@ const NPassword = ({ name, label, placeholder }: Props) => {
                             id={name}
                             type={showPassword ? "text" : "password"}
                             placeholder={placeholder || "Enter your password"}
+                            required={required}
+                            minLength={minLength}
                             {...field}
                             className="pr-10 py-6"
                         />
