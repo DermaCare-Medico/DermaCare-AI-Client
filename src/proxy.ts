@@ -14,6 +14,7 @@ const roleBasedRoutes: Record<string, string[]> = {
 const publicRoutes = [
   "/login",
   "/register",
+  "/verify-email",
   "/forgot-password",
   "/reset-password",
 ];
@@ -72,6 +73,7 @@ export const config = {
     "/user/:path*",
     "/login",
     "/register",
+    "/verify-email",
     "/forgot-password",
     "/reset-password",
   ],
