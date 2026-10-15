@@ -3,6 +3,13 @@
 import Footer from "@/components/Common/Footer/Footer";
 import Navbar from "@/components/Common/Navbar/Navbar";
 import { useResendOtpMutation, useVerifyOtpMutation } from "@/redux/api/authApi";
+import {
+  DEMO_ACCOUNT,
+  DEMO_OTP,
+  clearDemoRegistration,
+  isDemoAuthEnabled,
+  readDemoRegistration,
+} from "@/src/utils/demoAuth";
 import { ArrowLeft, CheckCircle2, Clock3, MailCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -29,6 +36,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function VerifyEmailPage() {
+  const demoMode = isDemoAuthEnabled();
   const [email, setEmail] = useState("");
   const [digits, setDigits] = useState(Array<string>(OTP_LENGTH).fill(""));
   const [secondsLeft, setSecondsLeft] = useState(RESEND_DELAY_SECONDS);
@@ -44,9 +52,22 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedEmail = params.get("email")?.trim().toLowerCase() ?? "";
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail)) setEmail(requestedEmail);
-    else setRequestError("We couldn’t find a valid email address to verify. Please return to registration.");
-  }, []);
+    const demoRegistration = readDemoRegistration();
+    const resolvedEmail = requestedEmail || demoRegistration?.email || DEMO_ACCOUNT.email;
+
+    if (demoMode) {
+      setEmail(resolvedEmail);
+      setRequestError("");
+      return;
+    }
+
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resolvedEmail)) {
+      setEmail(resolvedEmail);
+      return;
+    }
+
+    setRequestError("We couldn’t find a valid email address to verify. Please return to registration.");
+  }, [demoMode]);
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -110,6 +131,25 @@ export default function VerifyEmailPage() {
 
   async function handleVerify() {
     if (!email || submissionInFlight.current || isVerifying) return;
+
+    if (demoMode) {
+      if (code !== DEMO_OTP) {
+        setInputError(`Demo code mismatch. Use ${DEMO_OTP} to continue.`);
+        inputRefs.current[0]?.focus();
+        return;
+      }
+
+      clearDemoRegistration();
+      setSuccessMessage("Demo email verification complete. You can now log in.");
+      setRequestError("");
+      setResendMessage("");
+      setDigits(Array<string>(OTP_LENGTH).fill(""));
+      window.setTimeout(() => {
+        window.location.assign("/login?demo=1");
+      }, 500);
+      return;
+    }
+
     if (!/^\d{6}$/.test(code)) {
       setInputError("Enter all 6 digits from the email.");
       inputRefs.current[digits.findIndex((digit) => !digit)]?.focus();
@@ -134,7 +174,17 @@ export default function VerifyEmailPage() {
   }
 
   async function handleResend() {
-    if (!email || secondsLeft > 0 || isResending || successMessage) return;
+    if (!email || isResending || successMessage) return;
+
+    if (demoMode) {
+      setRequestError("");
+      setResendMessage(`DEMO MODE: Use the fixed OTP ${DEMO_OTP}. No real email is sent in this frontend-only flow.`);
+      setDigits(Array<string>(OTP_LENGTH).fill(""));
+      inputRefs.current[0]?.focus();
+      return;
+    }
+
+    if (secondsLeft > 0) return;
     setRequestError("");
     setResendMessage("");
     try {
@@ -157,13 +207,27 @@ export default function VerifyEmailPage() {
           <section className={`${styles.formCard} ${styles.verifyCard}`} aria-labelledby="verify-heading">
             <div className={styles.mailIcon} aria-hidden="true"><MailCheck size={25} /></div>
             <h1 className={styles.heading} id="verify-heading">Verify your email</h1>
-            <p className={styles.subheading}>One quick step to keep your DermaCare AI account secure.</p>
+            <p className={styles.subheading}>
+              {demoMode
+                ? "Demo-only verification for local UI testing. No real email is sent."
+                : "One quick step to keep your DermaCare AI account secure."}
+            </p>
+
+            {demoMode && (
+              <p className={`${styles.notice} ${styles.noticeError}`} role="status">
+                DEMO MODE: Enter the fixed OTP {DEMO_OTP} to continue. The code is shown here for local testing only.
+              </p>
+            )}
 
             {email ? (
               <div className={styles.emailNotice}>
-                We sent a 6-digit verification code to
+                {demoMode ? "Demo verification is being checked for" : "We sent a 6-digit verification code to"}
                 <strong>{maskEmail(email)}</strong>
-                <span>The code expires in 5 minutes. Check your spam folder if you don’t see it.</span>
+                <span>
+                  {demoMode
+                    ? "Use the fixed demo code shown above. This flow does not send a real email."
+                    : "The code expires in 5 minutes. Check your spam folder if you don’t see it."}
+                </span>
               </div>
             ) : (
               <p className={`${styles.notice} ${styles.noticeError}`} role="alert">
@@ -194,7 +258,9 @@ export default function VerifyEmailPage() {
                           onChange={(event) => setDigitAt(index, event.target.value)}
                           onKeyDown={(event) => handleKeyDown(event, index)}
                           onPaste={(event) => handlePaste(event, index)}
-                          ref={(element) => { inputRefs.current[index] = element; }}
+                          ref={(element) => {
+                            inputRefs.current[index] = element;
+                          }}
                           type="text"
                           value={digit}
                         />
@@ -213,14 +279,14 @@ export default function VerifyEmailPage() {
                   onClick={handleVerify}
                   type="button"
                 >
-                  {isVerifying ? "Verifying…" : "Verify email"}
+                  {isVerifying ? "Verifying…" : demoMode ? "Verify demo code" : "Verify email"}
                   {!isVerifying && <ShieldCheck size={18} aria-hidden="true" />}
                 </button>
 
                 <div className={styles.resendRow}>
                   <span>Didn’t receive the code?</span>
-                  <button className={styles.resendButton} disabled={!email || secondsLeft > 0 || isResending} onClick={handleResend} type="button">
-                    {isResending ? "Sending…" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend code"}
+                  <button className={styles.resendButton} disabled={!email || isResending} onClick={handleResend} type="button">
+                    {isResending ? "Sending…" : demoMode ? "Use demo code instead" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend code"}
                   </button>
                 </div>
               </>

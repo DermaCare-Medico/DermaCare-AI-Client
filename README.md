@@ -18,6 +18,22 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Frontend-only demo authentication
+
+For local UI testing without the authentication API, set `NEXT_PUBLIC_DEMO_AUTH=true` before starting Next.js:
+
+```powershell
+$env:NEXT_PUBLIC_DEMO_AUTH = "true"
+npm run dev
+```
+
+With demo mode enabled, use `/register`, then enter the fixed demo OTP `123456` at `/verify-email`. Verification is local only; no email or backend request is made. At `/login`, use the clearly labeled fictional demo account:
+
+- Email: `demo.patient@dermacare.local`
+- Password: `DemoPass123`
+
+Successful login opens `/patient/dashboard`. The demo session is stored in `sessionStorage` for the current browser tab and is cleared on logout. Demo mode is not secure authentication; do not use real credentials or health information. Unset `NEXT_PUBLIC_DEMO_AUTH` or set it to `false` to use the normal API-backed authentication flow.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -1,9 +1,14 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
+import { isDemoAuthEnabled } from "@/src/utils/demoAuth";
 
 import { ReactNode } from "react";
 
 const NextAuthSessionProvider = ({ children }: { children: ReactNode }) => {
+  if (isDemoAuthEnabled()) {
+    return <>{children}</>;
+  }
+
   return <SessionProvider>{children}</SessionProvider>;
 };
 

@@ -71,6 +71,7 @@ export const config = {
     "/",
     "/admin/:path*",
     "/user/:path*",
+    "/patient/:path*",
     "/login",
     "/register",
     "/verify-email",

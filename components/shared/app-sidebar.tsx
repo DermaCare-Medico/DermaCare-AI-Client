@@ -8,10 +8,16 @@ import {
 } from "@/components/ui/sidebar";
 import Logo from "@/src/assets/logo.png";
 import {
+  CalendarClock,
+  ClipboardList,
   HandCoins,
   Home,
   InfoIcon,
   LayoutDashboard,
+  Pill,
+  ShoppingBag,
+  Sparkles,
+  Stethoscope,
   User,
   Users,
 } from "lucide-react";
@@ -67,6 +73,55 @@ const data = {
       {
         title: "Your Profile",
         url: "/user/dashboard/profile",
+        icon: User,
+      },
+      {
+        title: "Go Back To Home",
+        url: "/",
+        icon: Home,
+      },
+    ],
+  },
+  patient: {
+    navMain: [
+      {
+        title: "Dashboard",
+        url: "/patient/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "New Screening",
+        url: "/patient/screening/new",
+        icon: Sparkles,
+      },
+      {
+        title: "Screening History",
+        url: "/patient/dashboard",
+        icon: ClipboardList,
+      },
+      {
+        title: "Find Doctors",
+        url: "/patient/dashboard",
+        icon: Stethoscope,
+      },
+      {
+        title: "Appointments",
+        url: "/patient/dashboard",
+        icon: CalendarClock,
+      },
+      {
+        title: "Prescriptions",
+        url: "/patient/profile",
+        icon: Pill,
+      },
+      {
+        title: "Pharmacy Orders",
+        url: "/patient/dashboard",
+        icon: ShoppingBag,
+      },
+      {
+        title: "Profile",
+        url: "/patient/profile",
         icon: User,
       },
       {

@@ -7,6 +7,7 @@ import {
   RegisterRequest,
   useRegisterMutation,
 } from "@/redux/api/authApi";
+import { isDemoAuthEnabled, persistDemoRegistration } from "@/src/utils/demoAuth";
 import { ArrowRight, Eye, EyeOff, HeartPulse, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
@@ -81,6 +82,7 @@ export default function RegisterPage() {
   const [requestError, setRequestError] = useState("");
   const submissionInFlight = useRef(false);
   const [register, { isLoading }] = useRegisterMutation();
+  const demoMode = isDemoAuthEnabled();
 
   function updateValue<K extends RegistrationField>(field: K, value: RegistrationValues[K]) {
     const nextValues = { ...values, [field]: value };
@@ -117,6 +119,12 @@ export default function RegisterPage() {
     };
 
     try {
+      if (demoMode) {
+        persistDemoRegistration(payload.email, payload.name, "PATIENT");
+        window.location.assign(`/verify-email?email=${encodeURIComponent(payload.email)}&demo=1`);
+        return;
+      }
+
       await register(payload).unwrap();
       window.location.assign(`/verify-email?email=${encodeURIComponent(payload.email)}`);
     } catch (error: unknown) {
@@ -135,6 +143,11 @@ export default function RegisterPage() {
               <div className={styles.cardHeading}>
                 <h1 className={styles.heading} id="register-heading">Create your account</h1>
                 <p className={styles.subheading}>A more thoughtful way to care for your skin starts here.</p>
+                {demoMode && (
+                  <p className={`${styles.notice} ${styles.noticeError}`} role="status">
+                    DEMO MODE: Frontend-only test flow. No backend registration or real email is used. After verification, sign in with the demo account shown on the login screen.
+                  </p>
+                )}
               </div>
 
               <form noValidate onSubmit={handleSubmit}>
@@ -237,6 +250,7 @@ export default function RegisterPage() {
                     <label className={styles.label} htmlFor="role">I’m joining as a</label>
                     <select
                       className={styles.select}
+                      disabled={demoMode}
                       id="role"
                       onChange={(event) => updateValue("role", event.target.value as RegistrationRole)}
                       value={values.role}
@@ -245,7 +259,11 @@ export default function RegisterPage() {
                       <option value="DOCTOR">Doctor</option>
                       <option value="PHARMACY">Pharmacy</option>
                     </select>
-                    <p className={styles.hint}>Doctor and pharmacy accounts remain pending until approved by an administrator.</p>
+                    <p className={styles.hint}>
+                      {demoMode
+                        ? "Demo registration supports patient accounts only."
+                        : "Doctor and pharmacy accounts remain pending until approved by an administrator."}
+                    </p>
                   </div>
                 </div>
 
@@ -295,7 +313,7 @@ export default function RegisterPage() {
                 {requestError && <p className={`${styles.notice} ${styles.noticeError}`} role="alert">{requestError}</p>}
 
                 <button className={styles.submitButton} disabled={isLoading} type="submit">
-                  {isLoading ? "Creating your account…" : "Create account"}
+                  {isLoading ? "Creating your account…" : demoMode ? "Create demo account" : "Create account"}
                   {!isLoading && <ArrowRight size={18} aria-hidden="true" />}
                 </button>
 

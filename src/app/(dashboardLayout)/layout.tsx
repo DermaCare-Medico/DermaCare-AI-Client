@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Bell, ChevronRight, Home, Search } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { useAppSelector } from "@/redux/hooks";
 import { useDecodedToken } from "@/src/hooks/useDecodedToken";
@@ -17,9 +18,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const token = useAppSelector((state) => state.auth.token);
   const decodedToken = useDecodedToken(token);
-  const role = decodedToken?.role || "ADMIN";
+  const isPatientRoute = pathname.startsWith("/patient");
+  const role = isPatientRoute ? "PATIENT" : decodedToken?.role || "ADMIN";
 
   return (
     <SidebarProvider>
