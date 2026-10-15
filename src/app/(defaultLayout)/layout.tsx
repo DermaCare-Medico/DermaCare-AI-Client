@@ -4,11 +4,9 @@ import Navbar from "@/components/Common/Navbar/Navbar";
 const CommonLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
-      <main>
-        <Navbar/>
-         {children}
-        <Footer/>
-      </main>
+      <Navbar />
+      <main>{children}</main>
+      <Footer />
     </>
   );
 };

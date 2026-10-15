@@ -6,9 +6,10 @@ type Props = {
     name: string;
     placeholder: string;
     label?: string;
+    required?: boolean;
 };
 
-const NInput = ({ type, name, placeholder, label }: Props) => {
+const NInput = ({ type, name, placeholder, label, required }: Props) => {
     const { control } = useFormContext();
 
 
@@ -29,6 +30,7 @@ const NInput = ({ type, name, placeholder, label }: Props) => {
                         type={type}
                         placeholder={placeholder}
                         className="py-5 w-full"
+                        required={required}
                         {...field}
                     />
 

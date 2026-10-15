@@ -1,10 +1,5 @@
+import Otp from "@/components/Auth/Otp";
 
-
-export default function ResetPassword() {
-  return (
-    <div >
-    <h1>Design your forgot password page</h1>
-    </div>
-  );
+export default function Page() {
+  return <Otp />;
 }
-
