@@ -13,6 +13,8 @@ import { baseApi } from "./api/baseApi";
 import rootReducer from "./features/rootReducer";
 import persistReducer from "redux-persist/es/persistReducer";
 import storage from "redux-persist/lib/storage";
+import sessionStorage from "redux-persist/lib/storage/session";
+import { isDemoAuthEnabled } from "@/src/utils/demoAuth";
 
 const noopStorage = {
   getItem: (_key: string) => Promise.resolve(null),
@@ -24,8 +26,9 @@ export default noopStorage;
 
 const persistConfig = {
   key: "root",
-  storage:
-    typeof window !== "undefined" && window.localStorage
+  storage: isDemoAuthEnabled()
+    ? sessionStorage
+    : typeof window !== "undefined" && window.localStorage
       ? storage
       : noopStorage,
   whitelist: ["auth"],

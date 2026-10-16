@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
+import {
+  clearDemoSession,
+  isDemoAuthEnabled,
+  persistDemoSession,
+} from "@/src/utils/demoAuth";
+
 interface AuthState {
   token: string | null;
   user: any;
@@ -20,7 +26,12 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<{ token: string; user: any }>) => {
       state.token = action.payload.token;
       state.user = action.payload.user;
-      Cookies.set("accessToken", action.payload.token);
+
+      if (isDemoAuthEnabled()) {
+        persistDemoSession(action.payload.token, action.payload.user);
+      } else {
+        Cookies.set("accessToken", action.payload.token);
+      }
     },
     setRefreshToken: (
       state,
@@ -34,6 +45,10 @@ const authSlice = createSlice({
       state.user = null;
       state.refresh_token = null;
       Cookies.remove("accessToken");
+
+      if (isDemoAuthEnabled()) {
+        clearDemoSession();
+      }
     },
   },
 });

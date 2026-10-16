@@ -10,18 +10,126 @@ import {
 import { NavMain } from "@/components/shared/nav-main";
 import { NavUser } from "@/components/shared/nav-user";
 import {
-  ArrowLeft,
-  ClipboardCheck,
+  CalendarClock,
+  ClipboardList,
+  HandCoins,
   Home,
   LayoutDashboard,
+  Pill,
+  ShoppingBag,
+  Sparkles,
+  Stethoscope,
+  User,
   Users,
 } from "lucide-react";
 import Link from "next/link";
 
-const userNavigation = [
-  { title: "Dashboard", url: "/user", icon: LayoutDashboard },
-  { title: "Go back to home", url: "/", icon: Home },
-];
+const data = {
+  user: {
+    navMain: [
+      {
+        title: "Dashboard",
+        url: "/user",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Your Profile",
+        url: "/user/dashboard/profile",
+        icon: User,
+      },
+      {
+        title: "Go Back To Home",
+        url: "/",
+        icon: Home,
+      },
+    ],
+  },
+  admin: {
+    navMain: [
+      {
+        title: "Dashboard",
+        url: "/admin/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Users",
+        url: "/user/dashboard/users",
+        icon: HandCoins,
+        items: [
+          {
+            title: "Users",
+            url: "/user/dashboard/estimates",
+            icon: Users,
+          },
+          {
+            title: "Pending Users",
+            url: "/user/dashboard/pending-users",
+            icon: InfoIcon,
+          },
+        ],
+      },
+      {
+        title: "Your Profile",
+        url: "/user/dashboard/profile",
+        icon: User,
+      },
+      {
+        title: "Go Back To Home",
+        url: "/",
+        icon: Home,
+      },
+    ],
+  },
+  patient: {
+    navMain: [
+      {
+        title: "Dashboard",
+        url: "/patient/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "New Screening",
+        url: "/patient/screening/new",
+        icon: Sparkles,
+      },
+      {
+        title: "Screening History",
+        url: "/patient/dashboard",
+        icon: ClipboardList,
+      },
+      {
+        title: "Find Doctors",
+        url: "/patient/dashboard",
+        icon: Stethoscope,
+      },
+      {
+        title: "Appointments",
+        url: "/patient/dashboard",
+        icon: CalendarClock,
+      },
+      {
+        title: "Prescriptions",
+        url: "/patient/profile",
+        icon: Pill,
+      },
+      {
+        title: "Pharmacy Orders",
+        url: "/patient/dashboard",
+        icon: ShoppingBag,
+      },
+      {
+        title: "Profile",
+        url: "/patient/profile",
+        icon: User,
+      },
+      {
+        title: "Go Back To Home",
+        url: "/",
+        icon: Home,
+      },
+    ],
+  },
+};
 
 const adminNavigation = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },

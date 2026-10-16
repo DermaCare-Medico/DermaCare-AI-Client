@@ -24,8 +24,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const token = useAppSelector((state) => state.auth.token);
   const decodedToken = useDecodedToken(token);
+  const isPatientRoute = pathname.startsWith("/patient");
+  const role = isPatientRoute ? "PATIENT" : decodedToken?.role || "ADMIN";
   const role = decodedToken?.role || "ADMIN";
   const pathname = usePathname();
   const title = pageTitles[pathname] || "Dashboard";

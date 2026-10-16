@@ -1,0 +1,359 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.topBar,
+.panelHeader,
+.recordMetaRow,
+.resourcesHeader,
+.welcomeActions,
+.topActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.topBar {
+  flex-wrap: wrap;
+}
+
+.eyebrow,
+.welcomeLabel,
+.sectionEyebrow {
+  margin: 0 0 8px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.topBar h1,
+.welcomeCard h2,
+.panelHeader h3,
+.resourcesHeader h3 {
+  margin: 0;
+  color: #112b2c;
+  letter-spacing: -0.04em;
+}
+
+.topBar h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.welcomeCard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 28px;
+  border: 1px solid #dfeae7;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f3fbf9 0%, #ffffff 100%);
+  box-shadow: 0 16px 40px rgba(15, 118, 110, 0.06);
+}
+
+.welcomeCard h2 {
+  max-width: 620px;
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
+}
+
+.primaryButton,
+.secondaryButton,
+.appointmentButton {
+  min-height: 44px;
+}
+
+.secondaryButton {
+  border-color: #d4e5e3;
+  background: white;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.summaryCard,
+.panel,
+.resourceCard {
+  border: 1px solid #e4eeeb;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+}
+
+.summaryCard {
+  padding: 18px 20px;
+}
+
+.summaryCard p,
+.summaryCard span {
+  margin: 0;
+  color: #647b7d;
+  font-size: 0.84rem;
+}
+
+.summaryCard strong {
+  display: block;
+  margin: 10px 0 7px;
+  color: #122f32;
+  font-size: clamp(1.7rem, 3vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 20px;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.inlineLink,
+.textButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: #0f766e;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recordList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.recordCard {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid #edf2f2;
+  border-radius: 18px;
+  background: #fbfdfd;
+}
+
+.thumbnail {
+  display: grid;
+  place-items: center;
+  min-height: 76px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #dff5f0 0%, #d7ecff 100%);
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.recordDetails {
+  min-width: 0;
+}
+
+.recordMetaRow {
+  margin-bottom: 8px;
+  color: #66797a;
+  font-size: 0.78rem;
+}
+
+.recordDetails h4,
+.appointmentCard h4,
+.resourceCard h4 {
+  margin: 0;
+  color: #1b2f31;
+}
+
+.recordDetails p,
+.resourceCard p,
+.appointmentCard p {
+  margin: 8px 0 0;
+  color: #5f7276;
+  line-height: 1.6;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.statusCompleted {
+  background: #eaf9f3;
+  color: #126a4f;
+}
+
+.statusNeedsReview {
+  background: #fff5db;
+  color: #a05a00;
+}
+
+.statusIncomplete {
+  background: #fce7e7;
+  color: #a53939;
+}
+
+.statusConfirmed {
+  background: #eaf9f3;
+  color: #126a4f;
+}
+
+.statusPending {
+  background: #eef2ff;
+  color: #4451c2;
+}
+
+.appointmentCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f5fbfa 0%, #fff 100%);
+  border: 1px solid #e3efec;
+}
+
+.doctorAvatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #dff5f0;
+  color: #0f766e;
+}
+
+.appointmentMeta {
+  display: grid;
+  gap: 13px;
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  color: #4f6568;
+}
+
+.appointmentMeta li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notificationButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #dfeae7;
+  border-radius: 12px;
+  background: white;
+  color: #1a2d2f;
+  cursor: pointer;
+}
+
+.notificationButton span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.resourcesSection {
+  padding: 24px 0 12px;
+}
+
+.resourceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.resourceCard {
+  padding: 20px 18px;
+}
+
+.resourceIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: #edfaf7;
+  color: #0f766e;
+}
+
+.disclaimer {
+  margin: 18px 0 0;
+  color: #6f7b7d;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+  .summaryGrid,
+  .resourceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .summaryGrid,
+  .resourceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcomeCard,
+  .topBar,
+  .topActions,
+  .welcomeActions {
+    align-items: flex-start;
+  }
+
+  .topActions,
+  .welcomeActions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notificationButton,
+  .primaryButton,
+  .secondaryButton,
+  .appointmentButton {
+    width: 100%;
+  }
+
+  .recordCard {
+    grid-template-columns: 1fr;
+  }
+}

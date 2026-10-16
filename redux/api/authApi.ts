@@ -2,8 +2,33 @@
 
 import { baseApi } from "./baseApi";
 
+export type RegistrationRole = "PATIENT" | "DOCTOR" | "PHARMACY";
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  role: RegistrationRole;
+  termsAccepted: true;
+  privacyConsent: true;
+  marketingUpdates: boolean;
+  consentAcceptedAt: string;
+}
+
+export interface EmailRequest {
+  email: string;
+}
+
+export interface VerifyEmailRequest extends EmailRequest {
+  otp: string;
+}
+
+export interface AuthApiResponse {
+  message?: string;
+}
+
 export const authApi = baseApi.injectEndpoints({
-  endpoints: (builder: any) => ({
+  endpoints: (builder) => ({
     login: builder.mutation({
       query: (credentials: any) => ({
         url: "/auth/login",
@@ -12,7 +37,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
-    register: builder.mutation({
+    register: builder.mutation<AuthApiResponse, RegisterRequest>({
       query: (credentials: any) => ({
         url: "/auth/register",
         method: "POST",
@@ -36,14 +61,14 @@ export const authApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["User"],
     }),
-    resendOtp: builder.mutation({
+    resendOtp: builder.mutation<AuthApiResponse, EmailRequest>({
       query: (email: any) => ({
         url: "/auth/resend-otp",
         method: "POST",
         body: email,
       }),
     }),
-    verifyOtp: builder.mutation({
+    verifyOtp: builder.mutation<AuthApiResponse, VerifyEmailRequest>({
       query: (data: any) => ({
         url: "/auth/verify-otp",
         method: "POST",
