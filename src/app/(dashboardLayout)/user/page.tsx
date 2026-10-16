@@ -1,9 +1,5 @@
-const UserPage = () => {
-  return (
-    <div>
-      <h1>user page</h1>
-    </div>
-  );
-};
+import UserDashboard from "@/components/UserDashboard/UserDashboard";
 
-export default UserPage;
+export default function UserPage() {
+  return <UserDashboard />;
+}

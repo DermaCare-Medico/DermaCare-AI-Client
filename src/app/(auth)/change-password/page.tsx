@@ -1,9 +1,5 @@
-const ChangePasswordPage = () => {
-  return (
-    <div>
-      <h1>Design Change Password page here</h1>
-    </div>
-  );
-};
+import ChangePassword from "@/components/Auth/ChangePassword";
 
-export default ChangePasswordPage;
+export default function ChangePasswordPage() {
+  return <ChangePassword />;
+}

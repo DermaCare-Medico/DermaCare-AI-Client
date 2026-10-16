@@ -1,12 +1,5 @@
-import React from 'react';
+import ChangePassword from "@/components/Auth/ChangePassword";
 
-const page = () => {
-  return (
-    <div>
-      <h1>Design your change password page</h1>
-    </div>
-  );
-};
-
-export default page;
-
+export default function Page() {
+  return <ChangePassword />;
+}

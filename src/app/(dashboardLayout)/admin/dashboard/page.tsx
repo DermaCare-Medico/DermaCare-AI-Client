@@ -1,9 +1,10 @@
+import Dashboard from "@/components/AdminDashboard/Dashboard";
 
 
 const page = () => {
   return (
     <div>
-      <h1>Admin Dashboard</h1>
+      <Dashboard></Dashboard>
     </div>
   );
 };
