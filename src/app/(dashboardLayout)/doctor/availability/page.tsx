@@ -1,207 +1,319 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import {
+  CalendarPlus,
+  Clock,
+  Loader2,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, CheckCircle2, Plus, Trash2, Edit } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-export default function DoctorAvailability() {
-  const [availability, setAvailability] = useState([
-    { id: 1, day: "Monday", start: "09:00", end: "17:00" },
-    { id: 2, day: "Tuesday", start: "09:00", end: "17:00" },
-    { id: 3, day: "Wednesday", start: "09:00", end: "12:00" },
-    { id: 4, day: "Thursday", start: "09:00", end: "17:00" },
-    { id: 5, day: "Friday", start: "09:00", end: "17:00" },
-  ]);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [newSlot, setNewSlot] = useState({ day: "", start: "", end: "" });
+import { DataState } from "@/components/shared/DataState";
+import { DemoNotice } from "@/components/shared/DemoNotice";
+import { PageHeader } from "@/components/doctor/PageHeader";
 
-  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+import {
+  useCreateDoctorSlotMutation,
+  useDeleteDoctorSlotMutation,
+  useUpdateDoctorSlotMutation,
+} from "@/redux/api/doctorApi";
+import { useDoctorSlots } from "@/src/hooks/useDoctorModule";
+import { useAppSelector } from "@/redux/hooks";
+import { useDecodedToken } from "@/src/hooks/useDecodedToken";
+import { formatCurrency, formatDateTime, getApiErrorMessage } from "@/lib/doctor/utils";
+import type { DoctorSlot } from "@/types/doctor";
 
-  const handleAddSlot = () => {
-    if (!newSlot.day || !newSlot.start || !newSlot.end) {
-      alert("Please fill all fields");
+/** Converts an ISO string into the `datetime-local` input value. */
+function toLocalInput(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
+const slotStatusMeta: Record<string, string> = {
+  AVAILABLE: "bg-emerald-100 text-emerald-800",
+  HELD: "bg-amber-100 text-amber-800",
+  BOOKED: "bg-slate-100 text-slate-600",
+};
+
+export default function DoctorAvailabilityPage() {
+  const token = useAppSelector((state) => state.auth.token);
+  const decoded = useDecodedToken(token);
+  const doctorId = typeof decoded?.id === "string" ? decoded.id : undefined;
+
+  const { slots, isDemo, isLoading, isError, error, refetch } =
+    useDoctorSlots(doctorId);
+
+  const [createSlot, createState] = useCreateDoctorSlotMutation();
+  const [updateSlot, updateState] = useUpdateDoctorSlotMutation();
+  const [deleteSlot, deleteState] = useDeleteDoctorSlotMutation();
+
+  const [draft, setDraft] = useState({ start: "", end: "", fee: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState({ start: "", end: "" });
+
+  const sorted = useMemo(
+    () =>
+      [...slots].sort(
+        (a, b) =>
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      ),
+    [slots]
+  );
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.start || !draft.end) {
+      toast.error("Please choose a start and end time.");
       return;
     }
-    const slot = {
-      id: Date.now(),
-      day: newSlot.day,
-      start: newSlot.start,
-      end: newSlot.end,
-    };
-    setAvailability([...availability, slot]);
-    setNewSlot({ day: "", start: "", end: "" });
-    alert("Availability added");
-  };
+    if (new Date(draft.end) <= new Date(draft.start)) {
+      toast.error("The end time must be after the start time.");
+      return;
+    }
 
-  const handleUpdateSlot = (id: number, day: string, start: string, end: string) => {
-    setAvailability(
-      availability.map((slot) =>
-        slot.id === id ? { ...slot, day, start, end } : slot
-      )
-    );
-    setEditingId(null);
-    alert("Availability updated");
-  };
+    try {
+      await createSlot({
+        startTime: new Date(draft.start).toISOString(),
+        endTime: new Date(draft.end).toISOString(),
+        fee: draft.fee ? Number(draft.fee) : undefined,
+      }).unwrap();
+      toast.success("Availability slot added.");
+      setDraft({ start: "", end: "", fee: "" });
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not create the slot."));
+    }
+  }
 
-  const handleDeleteSlot = (id: number) => {
-    setAvailability(availability.filter((slot) => slot.id !== id));
-    alert("Availability removed");
-  };
+  async function handleUpdate(slot: DoctorSlot) {
+    if (!slot.startTime || !editDraft.start || !editDraft.end) return;
+    try {
+      await updateSlot({
+        id: slot.id,
+        startTime: new Date(editDraft.start).toISOString(),
+        endTime: new Date(editDraft.end).toISOString(),
+      }).unwrap();
+      toast.success("Slot updated.");
+      setEditingId(null);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not update the slot."));
+    }
+  }
 
-  const handleStartEdit = (id: number) => {
-    setEditingId(id);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-  };
+  async function handleDelete(slotId: string) {
+    try {
+      await deleteSlot(slotId).unwrap();
+      toast.success("Slot removed.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not remove the slot."));
+    }
+  }
 
   return (
-    <section className="py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">Availability Manager</h1>
-        <p className="text-white/60 mt-1">
-          Manage your working hours and appointment slots
-        </p>
-      </div>
+    <section>
+      <PageHeader
+        eyebrow="Availability"
+        title="Consultation slots"
+        description="Publish the times patients can book. Booked or held slots cannot be edited."
+      />
 
-      {/* Add New Slot Form */}
-      <Card className="bg-background mb-6">
-        <CardHeader>
-          <h2 className="text-lg font-bold text-white">Add Availability Slot</h2>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label htmlFor="daySelect" className="mb-2 block text-white/60">
-                Day
-              </label>
-              <select
-                id="daySelect"
-                value={newSlot.day}
-                onChange={(e) => setNewSlot({ ...newSlot, day: e.target.value })}
-                className="block w-full rounded bg-background/50 border border-white/20 px-3 py-2 text-white"
+      {isDemo && <DemoNotice className="mb-6" />}
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.6fr]">
+        {/* Add slot */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-[#163A5F]">
+              <CalendarPlus size={18} className="text-[#0F888D]" />
+              Add a slot
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleCreate} className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="slot-start">Start</Label>
+                <Input
+                  id="slot-start"
+                  type="datetime-local"
+                  value={draft.start}
+                  onChange={(e) => setDraft((d) => ({ ...d, start: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="slot-end">End</Label>
+                <Input
+                  id="slot-end"
+                  type="datetime-local"
+                  value={draft.end}
+                  onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="slot-fee">Fee (USD, optional)</Label>
+                <Input
+                  id="slot-fee"
+                  type="number"
+                  min={0}
+                  value={draft.fee}
+                  onChange={(e) => setDraft((d) => ({ ...d, fee: e.target.value }))}
+                  placeholder="75"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={createState.isLoading}
+                className="w-full bg-[#0F888D] hover:bg-[#0C7479]"
               >
-                <option value="">Select a day</option>
-                {days.map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="startTime" className="mb-2 block text-white/60">
-                Start Time
-              </label>
-              <input
-                id="startTime"
-                type="time"
-                value={newSlot.start}
-                onChange={(e) => setNewSlot({ ...newSlot, start: e.target.value })}
-                className="block w-full rounded bg-background/50 border border-white/20 px-3 py-2 text-white"
-              />
-            </div>
-            <div>
-              <label htmlFor="endTime" className="mb-2 block text-white/60">
-                End Time
-              </label>
-              <input
-                id="endTime"
-                type="time"
-                value={newSlot.end}
-                onChange={(e) => setNewSlot({ ...newSlot, end: e.target.value })}
-                className="block w-full rounded bg-background/50 border border-white/20 px-3 py-2 text-white"
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleAddSlot}
-            className="w-full bg-primary text-white hover:bg-primary/90"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add Slot
-          </Button>
-        </CardContent>
-      </Card>
+                {createState.isLoading ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <CalendarPlus size={16} />
+                )}
+                Publish slot
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      {/* Current Availability */}
-      <Card className="bg-background">
-        <CardHeader>
-          <h2 className="text-lg font-bold text-white">Current Availability</h2>
-        </CardHeader>
-        <CardContent>
-          {availability.length > 0 ? (
-            <div className="space-y-4">
-              {availability.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="flex items-between justify-between p-4 bg-background/50 rounded-lg"
-                >
-                  <div className="flex-1 space-x-3">
-                    <div className="flex items-center space-x-3">
-                      <CalendarCheck className="h-4 w-4 text-primary" />
-                      <div>
-                        <h3 className="font-medium text-white">{slot.day}</h3>
-                        <p className="text-white/60 text-sm">
-                          {slot.start} - {slot.end}
-                        </p>
-                      </div>
+        {/* Slot list */}
+        <Card className="border-slate-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-[#163A5F]">
+              <Clock size={18} className="text-[#0F888D]" />
+              Published slots
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DataState
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              isEmpty={sorted.length === 0}
+              emptyTitle="No slots published"
+              emptyMessage="Add your first availability slot so patients can book a consultation."
+              onRetry={refetch}
+            >
+              <div className="space-y-3">
+                {sorted.map((slot) => {
+                  const editable = slot.status === undefined || slot.status === "AVAILABLE";
+                  const isEditing = editingId === slot.id;
+                  return (
+                    <div
+                      key={slot.id}
+                      className="rounded-lg border border-slate-200 bg-white p-3"
+                    >
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <Input
+                              type="datetime-local"
+                              value={editDraft.start}
+                              onChange={(e) =>
+                                setEditDraft((d) => ({ ...d, start: e.target.value }))
+                              }
+                            />
+                            <Input
+                              type="datetime-local"
+                              value={editDraft.end}
+                              onChange={(e) =>
+                                setEditDraft((d) => ({ ...d, end: e.target.value }))
+                              }
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-[#0F888D] hover:bg-[#0C7479]"
+                              disabled={updateState.isLoading}
+                              onClick={() => handleUpdate(slot)}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingId(null)}
+                            >
+                              <X size={14} /> Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[#163A5F]">
+                              {formatDateTime(slot.startTime)}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              to {formatDateTime(slot.endTime)}
+                              {slot.fee !== undefined ? ` · ${formatCurrency(slot.fee)}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                slotStatusMeta[slot.status ?? "AVAILABLE"] ??
+                                "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {(slot.status ?? "AVAILABLE").replace(/_/g, " ")}
+                            </span>
+                            {editable && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label="Edit slot"
+                                  onClick={() => {
+                                    setEditingId(slot.id);
+                                    setEditDraft({
+                                      start: toLocalInput(slot.startTime),
+                                      end: toLocalInput(slot.endTime),
+                                    });
+                                  }}
+                                >
+                                  <Pencil size={15} />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label="Delete slot"
+                                  className="text-rose-600 hover:text-rose-700"
+                                  disabled={deleteState.isLoading}
+                                  onClick={() => handleDelete(slot.id)}
+                                >
+                                  <Trash2 size={15} />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {editingId === slot.id ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const start = prompt("Enter start time (HH:MM)", slot.start);
-                            const end = prompt("Enter end time (HH:MM)", slot.end);
-                            if (start && end) {
-                              handleUpdateSlot(slot.id, slot.day, start, end);
-                            }
-                          }}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={handleCancelEdit}
-                          className="h-8 w-8"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleStartEdit(slot.id)}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleDeleteSlot(slot.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center py-8 text-white/60">
-              No availability set. Add your first slot above.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                  );
+                })}
+              </div>
+            </DataState>
+          </CardContent>
+        </Card>
+      </div>
     </section>
   );
 }

@@ -24,6 +24,12 @@ const pageTitles: Record<string, string> = {
   "/patient/dashboard": "Patient Dashboard",
   "/patient/screening/new": "New Screening",
   "/patient/profile": "My Profile",
+
+  "/doctor": "Doctor Dashboard",
+  "/doctor/appointments": "Appointments",
+  "/doctor/availability": "Availability",
+  "/doctor/profile": "Profile & License",
+  "/doctor/pending-approval": "Verification Status",
 };
 
 export default function DashboardLayout({
@@ -38,13 +44,22 @@ export default function DashboardLayout({
 
   // Determine sidebar role
   const isPatientRoute = pathname.startsWith("/patient");
+  const isDoctorRoute = pathname.startsWith("/doctor");
 
   const role = isPatientRoute
     ? "PATIENT"
-    : decodedToken?.role || "ADMIN";
+    : isDoctorRoute
+      ? decodedToken?.role || "DOCTOR"
+      : decodedToken?.role || "ADMIN";
 
-  // Dynamic page title
-  const title = pageTitles[pathname] || "Dashboard";
+  // Dynamic page title (exact match, then longest matching route prefix)
+  const title =
+    pageTitles[pathname] ??
+    Object.keys(pageTitles)
+      .filter((key) => pathname.startsWith(`${key}/`))
+      .sort((a, b) => b.length - a.length)
+      .map((key) => pageTitles[key])[0] ??
+    "Dashboard";
 
   // Display name
   const firstName =
@@ -55,7 +70,9 @@ export default function DashboardLayout({
         ? "DermaCare Admin"
         : role === "PATIENT"
           ? "Patient"
-          : "DermaCare User";
+          : role === "DOCTOR"
+            ? "Doctor"
+            : "DermaCare User";
 
   // Dashboard home route
   const dashboardHome =
@@ -63,7 +80,9 @@ export default function DashboardLayout({
       ? "/admin/dashboard"
       : role.toUpperCase() === "PATIENT"
         ? "/patient/dashboard"
-        : "/user";
+        : role.toUpperCase() === "DOCTOR"
+          ? "/doctor"
+          : "/user";
 
   return (
     <SidebarProvider>

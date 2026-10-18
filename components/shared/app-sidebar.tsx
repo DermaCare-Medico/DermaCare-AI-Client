@@ -136,18 +136,23 @@ const data = {
     navMain: [
       {
         title: "Dashboard",
-        url: "/doctor/dashboard",
+        url: "/doctor",
         icon: LayoutDashboard,
       },
       {
-        title: "Profile & License",
-        url: "/doctor/profile",
-        icon: Settings,
+        title: "Appointments",
+        url: "/doctor/appointments",
+        icon: CalendarClock,
       },
       {
         title: "Availability",
         url: "/doctor/availability",
         icon: Calendar,
+      },
+      {
+        title: "Profile & License",
+        url: "/doctor/profile",
+        icon: Settings,
       },
       {
         title: "Pending Approval",

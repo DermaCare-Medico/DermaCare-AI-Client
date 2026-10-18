@@ -1,94 +1,164 @@
-﻿import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CheckCircle2, Edit } from "lucide-react";
-import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
+﻿"use client";
 
-export default function DoctorPendingApproval() {
-  // Mock data - in a real app, this would come from the backend
-  const submission = {
-    id: "sub_001",
-    submittedAt: "Oct 10, 2026",
-    status: "pending",
-    licenseNumber: "DERM-2018-4521",
-    notes: "Under review by the medical board. Expected response within 5-7 business days.",
-  };
+import Link from "next/link";
+import { useMemo } from "react";
+import {
+  BadgeCheck,
+  Clock,
+  Edit,
+  ShieldAlert,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import { PageHeader } from "@/components/doctor/PageHeader";
+import { VerificationStatusBadge } from "@/components/doctor/StatusBadge";
+
+import { useGetMeQuery } from "@/redux/api/authApi";
+import { useAppSelector } from "@/redux/hooks";
+import { readIdentity } from "@/lib/doctor/identity";
+import { formatDate, getApiErrorMessage } from "@/lib/doctor/utils";
+import type { VerificationStatus } from "@/types/doctor";
+
+const copy: Record<VerificationStatus, { title: string; body: string }> = {
+  NOT_SUBMITTED: {
+    title: "License not submitted",
+    body: "Submit your medical license to begin the verification process.",
+  },
+  PENDING_REVIEW: {
+    title: "Pending review",
+    body: "Your medical license is being reviewed by the medical board. You will be notified by email once a decision is made.",
+  },
+  APPROVED: {
+    title: "License approved",
+    body: "Your license is verified. You now have full access to the doctor dashboard and schedule.",
+  },
+  REJECTED: {
+    title: "License rejected",
+    body: "Your previous submission was rejected. Please review the requirements and submit a valid document.",
+  },
+};
+
+export default function DoctorPendingApprovalPage() {
+  const token = useAppSelector((state) => state.auth.token);
+  const { data, isLoading, isError, error, refetch } = useGetMeQuery(undefined, {
+    skip: !token,
+  });
+
+  const identity = useMemo(() => readIdentity(data), [data]);
+  const status: VerificationStatus = identity.status ?? "NOT_SUBMITTED";
+  const content = copy[status];
+
+  const Icon =
+    status === "APPROVED"
+      ? ShieldCheck
+      : status === "REJECTED"
+        ? XCircle
+        : status === "PENDING_REVIEW"
+          ? Clock
+          : ShieldAlert;
 
   return (
-    <section className="py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">Pending Approval</h1>
-        <p className="text-white/60 mt-1">
-          Your license submission is currently under review
-        </p>
-      </div>
+    <section>
+      <PageHeader
+        eyebrow="Account approval"
+        title="Verification status"
+        description="Your doctor account is activated once your medical license is verified."
+        actions={<VerificationStatusBadge status={status} />}
+      />
 
-      <Card className="bg-background">
-        <CardHeader>
-          <h2 className="text-lg font-bold text-white">Submission Status</h2>
+      <Card className="max-w-2xl border-slate-200">
+        <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+          <span className="grid size-12 place-items-center rounded-xl bg-[#E8F5F4] text-[#0F888D]">
+            <Icon size={22} />
+          </span>
+          <CardTitle className="text-lg text-[#163A5F]">{content.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="h-12 w-12 bg-primary/20 rounded-lg flex items-center justify-center">
-              <CheckCircle2 className="h-6 w-6 text-yellow-400 animate-pulse" />
+          {isLoading && (
+            <div className="space-y-3" aria-busy="true">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">Pending Review</h3>
-              <p className="text-white/60">
-                Your medical license submission is awaiting approval from the
-                medical board.
-              </p>
-            </div>
-          </div>
+          )}
 
-          <Separator className="my-6" />
-
-          <div className="space-y-4">
-            <div className="grid gap-2">
-              <p className="text-white/60">Submitted:</p>
-              <p className="text-white">{submission.submittedAt}</p>
-            </div>
-            <div className="grid gap-2">
-              <p className="text-white/60">License Number:</p>
-              <p className="text-white">{submission.licenseNumber}</p>
-            </div>
-            <div className="grid gap-2">
-              <p className="text-white/60">Current Status:</p>
-              <p className="text-white">
-                <span className="px-3 py-1 rounded bg-yellow-900/20 text-yellow-300">
-                  {submission.status}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <p className="text-white/60 mt-4">{submission.notes}</p>
-
-          <div className="mt-6">
-            <h3 className="text-lg font-bold text-primary mb-4">Next Steps</h3>
-            <p className="text-white/60 mb-4">
-              You will receive an email notification once your license has been
-              reviewed. Please ensure your contact information is up to date.
+          {isError && (
+            <p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+              {getApiErrorMessage(error, "Could not load your verification status.")}{" "}
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="font-semibold underline"
+              >
+                Retry
+              </button>
             </p>
-            <Link
-              href="/doctor/profile"
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-            >
-              <Edit className="mr-2 h-4 w-4" /> Update Profile & License
-            </Link>
-          </div>
+          )}
+
+          {!isLoading && !isError && (
+            <>
+              <p className="text-sm leading-6 text-slate-600">{content.body}</p>
+
+              <Separator />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Doctor" value={identity.name || "—"} />
+                <Field
+                  label="License number"
+                  value={identity.licenseNumber || "—"}
+                />
+                <Field
+                  label="Submitted"
+                  value={
+                    identity.licenseSubmittedAt
+                      ? formatDate(identity.licenseSubmittedAt)
+                      : "—"
+                  }
+                />
+                <Field label="Status" value={status.replace(/_/g, " ")} />
+              </div>
+
+              {status === "APPROVED" ? (
+                <Button asChild className="bg-[#0F888D] hover:bg-[#0C7479]">
+                  <Link href="/doctor">
+                    <BadgeCheck size={16} /> Go to dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild className="bg-[#0F888D] hover:bg-[#0C7479]">
+                  <Link href="/doctor/profile">
+                    <Edit size={16} />
+                    {status === "PENDING_REVIEW"
+                      ? "View profile & license"
+                      : "Update profile & license"}
+                  </Link>
+                </Button>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
-
-      {/* Empty state for when approved - redirect or show different message */}
-      {/* This would be handled by routing in a real app, but for mock we show a note */}
-      <div className="mt-8 text-center text-white/60">
-        <p>
-          <em>
-            Note: This page is only visible when your license is pending approval.
-            Once approved, you will be redirected to your doctor dashboard.
-          </em>
-        </p>
-      </div>
     </section>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="text-sm text-slate-700">{value}</p>
+    </div>
   );
 }

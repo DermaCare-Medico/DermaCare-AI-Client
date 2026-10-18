@@ -1,108 +1,153 @@
-﻿import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CheckCircle2, Clock, Users, Activity } from "lucide-react";
+﻿"use client";
 
-export default function DoctorDashboard() {
-  // Mock data
-  const stats = [
-    { title: "Verified Patients", value: "1,245", icon: Users, trend: "+12%" },
-    { title: "Appointments This Week", value: "24", icon: Activity, trend: "+5%" },
-    { title: "Approval Rate", value: "94%", icon: CheckCircle2, trend: "+2%" },
-    { title: "Avg. Response Time", value: "2.4h", icon: Clock, trend: "-10%" },
-  ];
+import Link from "next/link";
+import {
+  CalendarCheck,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardList,
+  Inbox,
+} from "lucide-react";
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      patientName: "Jane Smith",
-      time: "Today, 2:30 PM",
-      type: "Follow-up",
-      status: "Confirmed",
-    },
-    {
-      id: 2,
-      patientName: "Robert Johnson",
-      time: "Tomorrow, 10:00 AM",
-      type: "New Consultation",
-      status: "Pending",
-    },
-    {
-      id: 3,
-      patientName: "Maria Garcia",
-      time: "Oct 16, 3:15 PM",
-      type: "Skin Check",
-      status: "Confirmed",
-    },
-  ];
+import { AppointmentCard } from "@/components/doctor/AppointmentCard";
+import { DataState } from "@/components/shared/DataState";
+import { DemoNotice } from "@/components/shared/DemoNotice";
+import { PageHeader } from "@/components/doctor/PageHeader";
+import { StatCard } from "@/components/doctor/StatCard";
+import { useDoctorAppointments } from "@/src/hooks/useDoctorModule";
+import { useAppSelector } from "@/redux/hooks";
+import { useDecodedToken } from "@/src/hooks/useDecodedToken";
+import { isToday } from "@/lib/doctor/utils";
+
+export default function DoctorDashboardPage() {
+  const { appointments, isDemo, isLoading, isError, error, refetch } =
+    useDoctorAppointments();
+
+  const token = useAppSelector((state) => state.auth.token);
+  const decoded = useDecodedToken(token);
+  const authUser = useAppSelector((state) => state.auth.user) as
+    | { name?: string; firstName?: string }
+    | null;
+
+  const displayName =
+    (typeof decoded?.firstName === "string" && decoded.firstName) ||
+    authUser?.firstName ||
+    authUser?.name ||
+    (typeof decoded?.name === "string" && decoded.name) ||
+    "Doctor";
+
+  const todaysAppointments = appointments
+    .filter(
+      (a) =>
+        isToday(a.scheduledTime) &&
+        (a.status === "SCHEDULED" || a.status === "IN_PROGRESS")
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime()
+    );
+
+  const pendingRequests = appointments.filter(
+    (a) => a.status === "CANCELLATION_REQUESTED"
+  );
+
+  const completed = appointments.filter((a) => a.status === "COMPLETED");
+
+  const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
 
   return (
-    <section className="py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-primary">Doctor Dashboard</h1>
-        <p className="text-white/60 mt-1">
-          Overview of your practice and patient interactions
-        </p>
+    <section>
+      <PageHeader
+        eyebrow="Doctor dashboard"
+        title={`Good to see you, ${displayName}`}
+        description="Overview of your requests, today's schedule, and completed consultations."
+        actions={
+          <Link
+            href="/doctor/appointments"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:border-[#0F888D]/40 hover:text-[#0F888D]"
+          >
+            <ClipboardList size={16} /> All appointments
+          </Link>
+        }
+      />
+
+      {isDemo && <DemoNotice className="mb-6" />}
+
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Pending requests"
+          value={pendingRequests.length}
+          icon={Inbox}
+          hint="Cancellation requests awaiting review"
+        />
+        <StatCard
+          title="Today's appointments"
+          value={todaysAppointments.length}
+          icon={CalendarClock}
+          hint="Scheduled or in progress today"
+        />
+        <StatCard
+          title="Completed consultations"
+          value={completed.length}
+          icon={CheckCircle2}
+          hint="All-time completed"
+        />
+        <StatCard
+          title="Upcoming scheduled"
+          value={scheduled.length}
+          icon={CalendarCheck}
+          hint="Booked and not started"
+        />
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="bg-background">
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-3">
-                <stat.icon className="h-5 w-5 text-primary" />
-                <h2 className="text-sm font-medium text-white/60">{stat.title}</h2>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              <p className="text-sm flex items-center space-x-2 text-white/60">
-                <span className={stat.trend.startsWith("+") ? "text-green-500" : "text-red-500"}>
-                  {stat.trend}
-                </span>
-                vs last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Upcoming Appointments */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-primary mb-4">
-          Upcoming Appointments
-        </h2>
-        <div className="space-y-4">
-          {upcomingAppointments.map((appt) => (
-            <Card key={appt.id} className="bg-background">
-              <CardContent className="space-y-3">
-                <div className="flex items-between justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium text-white">{appt.patientName}</p>
-                    <p className="text-sm text-white/60">{appt.time}</p>
-                    <span className="px-2 py-0.5 rounded text-xs font-medium">
-                      {appt.status === "Confirmed" ? (
-                        <span className="bg-green-900/20 text-green-300">
-                          Confirmed
-                        </span>
-                      ) : (
-                        <span className="bg-yellow-900/20 text-yellow-300">
-                          Pending
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <p className="text-sm text-white/60">{appt.type}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div>
+          <h2 className="mb-4 text-lg font-bold text-[#163A5F]">
+            Today&apos;s appointments
+          </h2>
+          <DataState
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            isEmpty={todaysAppointments.length === 0}
+            emptyTitle="No appointments today"
+            emptyMessage="Your schedule for today is clear."
+            onRetry={refetch}
+          >
+            <div className="space-y-3">
+              {todaysAppointments.map((appointment) => (
+                <AppointmentCard
+                  key={appointment.appointmentId}
+                  appointment={appointment}
+                />
+              ))}
+            </div>
+          </DataState>
         </div>
-        {/* Empty state */}
-        {upcomingAppointments.length === 0 && (
-          <p className="text-center py-8 text-white/60">
-            No upcoming appointments. Your schedule is clear.
-          </p>
-        )}
+
+        <div>
+          <h2 className="mb-4 text-lg font-bold text-[#163A5F]">
+            Pending requests
+          </h2>
+          <DataState
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            isEmpty={pendingRequests.length === 0}
+            emptyTitle="No pending requests"
+            emptyMessage="Cancellation requests from patients will appear here."
+            onRetry={refetch}
+          >
+            <div className="space-y-3">
+              {pendingRequests.map((appointment) => (
+                <AppointmentCard
+                  key={appointment.appointmentId}
+                  appointment={appointment}
+                />
+              ))}
+            </div>
+          </DataState>
+        </div>
       </div>
     </section>
   );

@@ -29,7 +29,10 @@ export default function HowItWorksSection() {
   ];
 
   return (
-    <section className="w-full bg-[#F7F9FC] py-20 px-6 md:px-12 lg:px-24 font-sans text-[#172033]">
+    <section
+      id="how-it-works"
+      className="w-full bg-[#F7F9FC] py-20 px-6 md:px-12 lg:px-24 font-sans text-[#172033]"
+    >
       <div className="max-w-7xl mx-auto flex flex-col gap-12">
         {/* Section Header */}
         <div className="flex flex-col gap-2">

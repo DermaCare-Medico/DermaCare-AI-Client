@@ -91,18 +91,20 @@ export const authApi = baseApi.injectEndpoints({
     }),
     getMe: builder.query({
       query: () => ({
-        url: "/users/profile",
+        // OpenAPI: GET /auth/me — role-aware identity + verification status.
+        url: "/auth/me",
         method: "GET",
       }),
-      providesTags: ["User"],
+      providesTags: ["Identity", "User"],
     }),
     updateUser: builder.mutation({
       query: (data: any) => ({
-        url: "/users/update-profile",
-        method: "PUT",
+        // OpenAPI: PATCH /users/me/profile
+        url: "/users/me/profile",
+        method: "PATCH",
         body: data,
       }),
-      invalidatesTags: ["User"],
+      invalidatesTags: ["User", "Identity"],
     }),
   }),
 });

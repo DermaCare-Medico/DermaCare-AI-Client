@@ -82,7 +82,7 @@ export default function WhoWeAreSection() {
           <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-[#E2E8F0] mt-2">
             {/* CTA Button */}
             <Link
-              href="/how-it-works"
+              href="/#how-it-works"
               className="inline-flex items-center gap-3 bg-[#0F888D] hover:bg-[#0d7579] text-white px-6 py-3 rounded-full text-sm font-medium transition-all shadow-md group"
             >
               <span>Learn How It Works</span>

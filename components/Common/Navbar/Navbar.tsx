@@ -10,12 +10,13 @@ const Navbar = () => {
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const links = [
     { label: "Home", href: "/#home" },
-    { label: "Services", href: "/" },
-    { label: "Doctors", href: "/" },
-    { label: "How It Works", href: "/#upload-preview" },
-    { label: "Blog", href: "/" },
-    { label: "Contact", href: "/" },
-    { label: "Disclaimer", href: "/#medical-disclaimer" },
+    { label: "Doctors", href: "/doctors" },
+    { label: "Store", href: "/store" },
+    { label: "How It Works", href: "/#how-it-works" },
+    { label: "About", href: "/about-us" },
+    { label: "FAQ", href: "/faq" },
+    { label: "Contact", href: "/contact" },
+    { label: "Disclaimer", href: "/disclaimer" },
   ];
 
   return (
