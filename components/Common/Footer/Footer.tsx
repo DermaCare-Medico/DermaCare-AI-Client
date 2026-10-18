@@ -16,19 +16,22 @@ const Footer = () => {
           </div>
           <nav className={styles.column} id="product-links" aria-label="Product links">
             <h2>Product</h2>
-            <Link href="/#upload-preview">How It Works</Link>
-            <Link href="/">Services</Link>
-            <Link href="/">Doctors</Link>
-            <Link href="/">Blog</Link>
+            <Link href="/#how-it-works">How It Works</Link>
+            <Link href="/doctors">Doctors</Link>
+            <Link href="/store">Store</Link>
+            <Link href="/faq">FAQ</Link>
+          </nav>
+          <nav className={styles.column} id="company-links" aria-label="Company links">
+            <h2>Company</h2>
+            <Link href="/about-us">About Us</Link>
+            <Link href="/faq">FAQ</Link>
+            <Link href="/contact">Contact</Link>
           </nav>
           <nav className={styles.column} id="legal-links" aria-label="Legal links">
             <h2>Legal</h2>
-            <Link href="/#medical-disclaimer">Disclaimer</Link>
-            <Link href="/">Terms and Privacy</Link>
-          </nav>
-          <nav className={styles.column} id="support-links" aria-label="Support links">
-            <h2>Support</h2>
-            <Link href="/">Contact</Link>
+            <Link href="/terms">Terms & Conditions</Link>
+            <Link href="/privacy">Privacy Policy</Link>
+            <Link href="/disclaimer">Medical Disclaimer</Link>
           </nav>
         </div>
         <div className={styles.legal}>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -17,9 +16,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   ClipboardList,
-  HandCoins,
   Home,
-  Info,
   LayoutDashboard,
   Pill,
   ShoppingBag,
@@ -27,6 +24,9 @@ import {
   Stethoscope,
   User,
   Users,
+  Settings,
+  Calendar,
+  CheckCircle,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -131,6 +131,41 @@ const data = {
       },
     ],
   },
+
+  doctor: {
+    navMain: [
+      {
+        title: "Dashboard",
+        url: "/doctor",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Appointments",
+        url: "/doctor/appointments",
+        icon: CalendarClock,
+      },
+      {
+        title: "Availability",
+        url: "/doctor/availability",
+        icon: Calendar,
+      },
+      {
+        title: "Profile & License",
+        url: "/doctor/profile",
+        icon: Settings,
+      },
+      {
+        title: "Pending Approval",
+        url: "/doctor/pending-approval",
+        icon: CheckCircle,
+      },
+      {
+        title: "Go Back To Home",
+        url: "/",
+        icon: Home,
+      },
+    ],
+  },
 };
 
 export default function AppSidebar({
@@ -145,12 +180,14 @@ export default function AppSidebar({
       ? data.admin.navMain
       : normalizedRole === "patient"
         ? data.patient.navMain
-        : data.user.navMain;
+        : normalizedRole === "doctor"
+          ? data.doctor.navMain
+          : data.user.navMain;
 
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-slate-200 bg-white [&_[data-slot=sidebar-inner]]:bg-white"
+      className="border-r border-slate-200 bg-white **:data-[slot=sidebar-inner]:bg-white"
     >
       <SidebarHeader className="px-4 pt-5">
         <Link

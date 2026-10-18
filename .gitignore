@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# opencode
+.opencode
+.kilo
+
 # production
 /build
 
