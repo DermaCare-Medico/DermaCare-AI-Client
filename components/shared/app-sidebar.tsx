@@ -27,6 +27,9 @@ import {
   Settings,
   Calendar,
   CheckCircle,
+  BellRing,
+  BadgeDollarSign,
+  Landmark,
 } from "lucide-react";
 
 import Link from "next/link";
@@ -70,8 +73,38 @@ const data = {
         icon: Users,
       },
       {
+        title: "Doctors",
+        url: "/admin/dashboard/doctors",
+        icon: Stethoscope,
+      },
+      {
+        title: "Appointments",
+        url: "/admin/dashboard/appointments",
+        icon: CalendarClock,
+      },
+      {
+        title: "Orders",
+        url: "/admin/dashboard/orders",
+        icon: ShoppingBag,
+      },
+      {
+        title: "Medicines",
+        url: "/admin/dashboard/medicines",
+        icon: Pill,
+      },
+      {
+        title: "Doctor Payments",
+        url: "/admin/dashboard/doctor-payments",
+        icon: BadgeDollarSign,
+      },
+      {
+        title: "Audit Logs",
+        url: "/admin/dashboard/audit-logs",
+        icon: ClipboardList,
+      },
+      {
         title: "Your Profile",
-        url: "/user/dashboard/profile",
+        url: "/admin/dashboard/profile",
         icon: User,
       },
       {
@@ -96,28 +129,33 @@ const data = {
       },
       {
         title: "Screening History",
-        url: "/patient/dashboard",
+        url: "/patient/screening/history",
         icon: ClipboardList,
       },
       {
         title: "Find Doctors",
-        url: "/patient/dashboard",
+        url: "/doctors",
         icon: Stethoscope,
       },
       {
         title: "Appointments",
-        url: "/patient/dashboard",
+        url: "/patient/appointments",
         icon: CalendarClock,
       },
       {
         title: "Prescriptions",
-        url: "/patient/profile",
+        url: "/patient/prescriptions",
         icon: Pill,
       },
       {
         title: "Pharmacy Orders",
-        url: "/patient/dashboard",
+        url: "/patient/orders",
         icon: ShoppingBag,
+      },
+      {
+        title: "Notifications",
+        url: "/patient/notifications",
+        icon: BellRing,
       },
       {
         title: "Profile",
@@ -153,6 +191,21 @@ const data = {
         title: "Profile & License",
         url: "/doctor/profile",
         icon: Settings,
+      },
+      {
+        title: "Application",
+        url: "/doctor/application",
+        icon: ClipboardCheck,
+      },
+      {
+        title: "Earnings",
+        url: "/doctor/earnings",
+        icon: BadgeDollarSign,
+      },
+      {
+        title: "Payouts",
+        url: "/doctor/payouts",
+        icon: Landmark,
       },
       {
         title: "Pending Approval",

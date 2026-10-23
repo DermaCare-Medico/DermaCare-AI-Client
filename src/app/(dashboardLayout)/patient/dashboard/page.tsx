@@ -27,10 +27,10 @@ export default function PatientDashboardPage() {
           <h1>Good morning, Alex</h1>
         </div>
         <div className={styles.topActions}>
-          <button type="button" className={styles.notificationButton} aria-label="View notifications">
+          <Link href="/patient/notifications" className={styles.notificationButton} aria-label="View notifications">
             <BellRing size={16} />
             <span>3</span>
-          </button>
+          </Link>
           <Link href="/patient/screening/new" passHref>
             <Button size="lg" className={styles.primaryButton}>
               Start New Screening
@@ -50,7 +50,7 @@ export default function PatientDashboardPage() {
               Start New Screening <ArrowRight size={16} />
             </Button>
           </Link>
-          <Link href="/patient/dashboard" passHref>
+          <Link href="/doctors" passHref>
             <Button variant="outline" size="lg" className={styles.secondaryButton}>
               Find a Doctor
             </Button>
@@ -75,7 +75,7 @@ export default function PatientDashboardPage() {
               <p className={styles.sectionEyebrow}>Recent screenings</p>
               <h3>Screening history</h3>
             </div>
-            <Link href="/patient/dashboard" className={styles.inlineLink}>
+            <Link href="/patient/screening/history" className={styles.inlineLink}>
               View all
             </Link>
           </div>
@@ -95,9 +95,9 @@ export default function PatientDashboardPage() {
                   </div>
                   <h4>{screening.title}</h4>
                   <p>{screening.excerpt}</p>
-                  <button type="button" className={styles.textButton}>
+                  <Link href={`/patient/screening/${screening.id}`} className={styles.textButton}>
                     View Details
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -138,7 +138,7 @@ export default function PatientDashboardPage() {
             </li>
           </ul>
 
-          <Link href="/patient/dashboard" passHref>
+          <Link href="/patient/appointments" passHref>
             <Button variant="outline" className={styles.appointmentButton}>
               View Appointment
             </Button>

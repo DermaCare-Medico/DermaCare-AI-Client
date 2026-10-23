@@ -1,10 +1,11 @@
 import { Package, Pill, ShieldPlus } from "lucide-react";
+import Link from "next/link";
 
 import { formatMoney } from "@/lib/api/format";
 import type { Medicine } from "@/types/doctor";
 
 /** Public store catalog card. */
-export function MedicineCard({ medicine }: { medicine: Medicine }) {
+export function MedicineCard({ medicine, detailsHref }: { medicine: Medicine; detailsHref?: string }) {
   const inStock = medicine.inStock ?? (medicine.stockQuantity ?? 0) > 0;
 
   return (
@@ -72,6 +73,14 @@ export function MedicineCard({ medicine }: { medicine: Medicine }) {
           {formatMoney(medicine.price, medicine.currency ?? "USD")}
         </span>
       </div>
+      {detailsHref && (
+        <Link
+          href={detailsHref}
+          className="rounded-xl border border-[#0F888D] px-4 py-2 text-center text-sm font-semibold text-[#0F888D] transition-colors hover:bg-[#0F888D] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F888D] focus-visible:ring-offset-2"
+        >
+          View medicine details
+        </Link>
+      )}
     </article>
   );
 }
