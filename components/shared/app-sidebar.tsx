@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import Image from "next/image";
+import brandLogo from "@/src/favicon.ico";
 
 const data = {
   user: {
@@ -247,8 +249,8 @@ export default function AppSidebar({
           href="/"
           className="flex items-center gap-3 px-1 py-2"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#0F888D] text-sm font-bold text-white">
-            D
+          <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white shadow-sm">
+            <Image src={brandLogo} alt="" sizes="40px" className="size-full object-contain" aria-hidden="true" />
           </span>
 
           <span className="truncate text-lg font-bold tracking-tight text-[#163A5F] group-data-[collapsible=icon]:hidden">

@@ -3,6 +3,7 @@ import ReduxProvider from "@/redux/ReduxProvider";
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import { Toaster } from "sonner";
+import brandLogo from "@/src/favicon.ico";
 import "./globals.css";
 
 // console.log()
@@ -17,8 +18,13 @@ const roboto = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Starter kit",
-  description: "starter kit for nextjs with redux and redux persist",
+  title: "DermaCare AI",
+  description: "AI-assisted skin screening and dermatologist-led care.",
+  icons: {
+    icon: brandLogo.src,
+    shortcut: brandLogo.src,
+    apple: brandLogo.src,
+  },
 };
 
 export default function RootLayout({
