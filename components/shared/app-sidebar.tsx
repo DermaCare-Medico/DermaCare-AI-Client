@@ -27,9 +27,14 @@ import {
   Settings,
   Calendar,
   CheckCircle,
+  BellRing,
+  BadgeDollarSign,
+  Landmark,
 } from "lucide-react";
 
 import Link from "next/link";
+import Image from "next/image";
+import brandLogo from "@/src/favicon.ico";
 
 const data = {
   user: {
@@ -70,8 +75,38 @@ const data = {
         icon: Users,
       },
       {
+        title: "Doctors",
+        url: "/admin/dashboard/doctors",
+        icon: Stethoscope,
+      },
+      {
+        title: "Appointments",
+        url: "/admin/dashboard/appointments",
+        icon: CalendarClock,
+      },
+      {
+        title: "Orders",
+        url: "/admin/dashboard/orders",
+        icon: ShoppingBag,
+      },
+      {
+        title: "Medicines",
+        url: "/admin/dashboard/medicines",
+        icon: Pill,
+      },
+      {
+        title: "Doctor Payments",
+        url: "/admin/dashboard/doctor-payments",
+        icon: BadgeDollarSign,
+      },
+      {
+        title: "Audit Logs",
+        url: "/admin/dashboard/audit-logs",
+        icon: ClipboardList,
+      },
+      {
         title: "Your Profile",
-        url: "/user/dashboard/profile",
+        url: "/admin/dashboard/profile",
         icon: User,
       },
       {
@@ -96,28 +131,33 @@ const data = {
       },
       {
         title: "Screening History",
-        url: "/patient/dashboard",
+        url: "/patient/screening/history",
         icon: ClipboardList,
       },
       {
         title: "Find Doctors",
-        url: "/patient/dashboard",
+        url: "/doctors",
         icon: Stethoscope,
       },
       {
         title: "Appointments",
-        url: "/patient/dashboard",
+        url: "/patient/appointments",
         icon: CalendarClock,
       },
       {
         title: "Prescriptions",
-        url: "/patient/profile",
+        url: "/patient/prescriptions",
         icon: Pill,
       },
       {
         title: "Pharmacy Orders",
-        url: "/patient/dashboard",
+        url: "/patient/orders",
         icon: ShoppingBag,
+      },
+      {
+        title: "Notifications",
+        url: "/patient/notifications",
+        icon: BellRing,
       },
       {
         title: "Profile",
@@ -153,6 +193,21 @@ const data = {
         title: "Profile & License",
         url: "/doctor/profile",
         icon: Settings,
+      },
+      {
+        title: "Application",
+        url: "/doctor/application",
+        icon: ClipboardCheck,
+      },
+      {
+        title: "Earnings",
+        url: "/doctor/earnings",
+        icon: BadgeDollarSign,
+      },
+      {
+        title: "Payouts",
+        url: "/doctor/payouts",
+        icon: Landmark,
       },
       {
         title: "Pending Approval",
@@ -194,8 +249,8 @@ export default function AppSidebar({
           href="/"
           className="flex items-center gap-3 px-1 py-2"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#0F888D] text-sm font-bold text-white">
-            D
+          <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-white shadow-sm">
+            <Image src={brandLogo} alt="" sizes="40px" className="size-full object-contain" aria-hidden="true" />
           </span>
 
           <span className="truncate text-lg font-bold tracking-tight text-[#163A5F] group-data-[collapsible=icon]:hidden">
