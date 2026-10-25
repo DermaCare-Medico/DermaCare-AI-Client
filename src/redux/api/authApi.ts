@@ -16,6 +16,7 @@ export type AuthResponse = {
   data?: unknown;
 };
 
+
 export type RegistrationRole = "PATIENT" | "DOCTOR";
 
 export interface RegisterRequest {
@@ -26,8 +27,8 @@ export interface RegisterRequest {
   acceptTerms: true;
   acceptPrivacy: true;
   acceptHealthConsent: true;
-  consentVersion?: string;
 }
+
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
