@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Leaf, LockKeyhole, ShieldCheck } from "lucide-react";
+import { LockKeyhole, ShieldCheck } from "lucide-react";
 import doctor from "../../public/images/doctor1.jpg";
+import brandLogo from "@/src/favicon.ico";
 
 function Brand() {
   return (
@@ -11,8 +12,8 @@ function Brand() {
       aria-label="DermaCare AI home"
       className="inline-flex w-fit items-center gap-3"
     >
-      <span className="grid size-12 place-items-center rounded-2xl bg-white text-[#0F888D] shadow-sm">
-        <Leaf size={27} strokeWidth={2.2} aria-hidden="true" />
+      <span className="grid size-12 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm">
+        <Image src={brandLogo} alt="" sizes="48px" className="size-full object-contain" aria-hidden="true" />
       </span>
       <span className="text-[25px] font-bold tracking-[-0.06em] text-white">
         DermaCare <span className="text-[#0F888D]">AI</span>

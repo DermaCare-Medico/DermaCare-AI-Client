@@ -169,7 +169,11 @@ export default function StorePage() {
         >
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {medicines.map((medicine) => (
-              <MedicineCard key={medicine.id} medicine={medicine} />
+              <MedicineCard
+                key={medicine.id}
+                medicine={medicine}
+                detailsHref={isDemo ? `/store/${medicine.id}` : undefined}
+              />
             ))}
           </div>
         </DataState>

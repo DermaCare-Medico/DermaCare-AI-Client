@@ -1,0 +1,31 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Banknote, Eye, Percent, WalletCards } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AdminEmptyState, AdminPageHeader, PreviewNotice, StatusBadge } from "../_components/AdminPreviewUI";
+import { adminDoctorPayments, type AdminDoctorPaymentPreview } from "../_components/admin-preview-data";
+
+const money = (value: number) => `৳${value.toLocaleString()}`;
+
+export default function DoctorPaymentsPage() {
+  const [doctor, setDoctor] = useState("ALL");
+  const [month, setMonth] = useState("ALL");
+  const [selected, setSelected] = useState<AdminDoctorPaymentPreview | null>(null);
+  const doctors = [...new Set(adminDoctorPayments.map((item) => item.doctor))];
+  const months = [...new Set(adminDoctorPayments.map((item) => item.month))];
+  const payments = useMemo(() => adminDoctorPayments.filter((item) => (doctor === "ALL" || item.doctor === doctor) && (month === "ALL" || item.month === month)), [doctor, month]);
+  const totals = payments.reduce((sum, item) => ({ gross: sum.gross + item.gross, commission: sum.commission + item.commission, net: sum.net + item.net }), { gross: 0, commission: 0, net: 0 });
+  const cards = [{ label: "Gross earnings", value: totals.gross, note: `${payments.reduce((sum, item) => sum + item.appointmentCount, 0)} completed appointments`, icon: Banknote }, { label: "Platform commission", value: totals.commission, note: "15% preview calculation", icon: Percent }, { label: "Doctor net earnings", value: totals.net, note: "85% preview calculation", icon: WalletCards }];
+
+  return <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <AdminPageHeader eyebrow="Finance operations" title="Doctor payments" description="Review monthly earnings calculations and demo settlement readiness." />
+    <PreviewNotice><strong>Demo settlement only.</strong>&nbsp; No bank transfer, wallet movement, or real payout occurs from this interface.</PreviewNotice>
+    <section className="grid gap-4 sm:grid-cols-3">{cards.map(({ label, value, note, icon: Icon }) => <article key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600">{label}</p><span className="grid size-9 place-items-center rounded-xl bg-cyan-50 text-[#0F888D]"><Icon className="size-4" aria-hidden="true"/></span></div><p className="mt-4 text-2xl font-bold text-[#163A5F]">{money(value)}</p><p className="mt-1 text-xs text-slate-500">{note}</p></article>)}</section>
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-label="Payment filters"><div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1 block text-xs font-semibold text-slate-600">Doctor</span><select value={doctor} onChange={(event) => setDoctor(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="ALL">All doctors</option>{doctors.map((item) => <option key={item}>{item}</option>)}</select></label><label><span className="mb-1 block text-xs font-semibold text-slate-600">Month</span><select value={month} onChange={(event) => setMonth(event.target.value)} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"><option value="ALL">All months</option>{months.map((item) => <option key={item}>{item}</option>)}</select></label></div></section>
+    {payments.length === 0 ? <AdminEmptyState /> : <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><Table><TableHeader><TableRow><TableHead>Reference</TableHead><TableHead>Doctor / Month</TableHead><TableHead>Appointments</TableHead><TableHead>Gross</TableHead><TableHead>Commission</TableHead><TableHead>Net</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Details</TableHead></TableRow></TableHeader><TableBody>{payments.map((payment) => <TableRow key={payment.id}><TableCell className="font-semibold text-[#163A5F]">{payment.id}</TableCell><TableCell><p className="font-medium">{payment.doctor}</p><p className="text-xs text-slate-500">{payment.month}</p></TableCell><TableCell>{payment.appointmentCount}</TableCell><TableCell>{money(payment.gross)}</TableCell><TableCell>{money(payment.commission)}</TableCell><TableCell className="font-semibold">{money(payment.net)}</TableCell><TableCell><StatusBadge value={payment.status}/></TableCell><TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => setSelected(payment)}><Eye className="size-4"/>View</Button></TableCell></TableRow>)}</TableBody></Table></section>}
+    <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}><DialogContent><DialogHeader><DialogTitle>Payment breakdown</DialogTitle><DialogDescription>Demo settlement calculation for {selected?.doctor}.</DialogDescription></DialogHeader>{selected && <div className="space-y-5"><div className="flex justify-between gap-4 rounded-xl bg-slate-50 p-4"><div><p className="text-xs text-slate-500">Reference</p><p className="font-semibold text-[#163A5F]">{selected.id}</p></div><StatusBadge value={selected.status}/></div><dl className="grid grid-cols-2 gap-4 text-sm"><div><dt className="text-slate-500">Gross</dt><dd className="font-semibold">{money(selected.gross)}</dd></div><div><dt className="text-slate-500">Platform commission (15%)</dt><dd className="font-semibold">− {money(selected.commission)}</dd></div><div><dt className="text-slate-500">Net earnings (85%)</dt><dd className="font-bold text-emerald-700">{money(selected.net)}</dd></div><div><dt className="text-slate-500">Prepared</dt><dd>{selected.preparedAt}</dd></div></dl>{selected.settledAt && <p className="text-sm text-slate-600">Demo settlement recorded: {selected.settledAt}</p>}<Button className="w-full" disabled>Send demo payment — API required</Button><p className="text-center text-xs text-slate-500">This control cannot initiate a real bank transfer.</p></div>}</DialogContent></Dialog>
+  </main>;
+}

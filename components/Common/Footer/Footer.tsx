@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import Image from "next/image";
+import brandLogo from "@/src/favicon.ico";
 import styles from "./Footer.module.css";
 
 const Footer = () => {
@@ -9,7 +10,7 @@ const Footer = () => {
         <div className={styles.columns}>
           <div className={styles.brandColumn}>
             <Link className={styles.brand} href="/">
-              <span className={styles.brandMark} aria-hidden="true"><Plus size={22} strokeWidth={3} /></span>
+              <span className={styles.brandMark} aria-hidden="true"><Image src={brandLogo} alt="" sizes="38px" /></span>
               <span>DermaCare <strong>AI</strong></span>
             </Link>
             <p>AI-assisted skin screening and teleconsultation. Preliminary screening, doctor-led care.</p>

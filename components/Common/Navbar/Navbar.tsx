@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRef, useState } from "react";
-import { Menu, Plus, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import brandLogo from "@/src/favicon.ico";
 import styles from "./Navbar.module.css";
 
 const Navbar = () => {
@@ -23,7 +25,7 @@ const Navbar = () => {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link className={styles.brand} href="/" aria-label="DermaCare AI home">
-          <span className={styles.brandMark} aria-hidden="true"><Plus size={22} strokeWidth={3} /></span>
+          <span className={styles.brandMark} aria-hidden="true"><Image src={brandLogo} alt="" sizes="38px" priority /></span>
           <span>DermaCare <strong>AI</strong></span>
         </Link>
 
