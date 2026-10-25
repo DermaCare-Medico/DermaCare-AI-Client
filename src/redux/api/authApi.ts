@@ -16,14 +16,28 @@ export type AuthResponse = {
   data?: unknown;
 };
 
+export type RegistrationRole = "PATIENT" | "DOCTOR";
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  role: RegistrationRole;
+  acceptTerms: true;
+  acceptPrivacy: true;
+  acceptHealthConsent: true;
+  consentVersion?: string;
+}
+
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    requestRegistrationOtp: builder.mutation<unknown, AuthRequest>({
-      query: (body) => ({
-        url: "/auth/register/request-otp",
-        method: "POST",
-        body,
-      }),
+    requestRegistrationOtp: builder.mutation<unknown, RegisterRequest>({
+  query: (body) => ({
+    url: "/auth/register/request-otp",
+    method: "POST",
+    body,
+  }),
+
     }),
 
     resendRegistrationOtp: builder.mutation<unknown, AuthRequest>({
@@ -119,3 +133,9 @@ export const {
   useRefreshSessionMutation,
   useLogoutMutation,
 } = authApi;
+
+export const useRegisterMutation = useRequestRegistrationOtpMutation;
+
+export const useResendOtpMutation = useResendRegistrationOtpMutation;
+
+export const useVerifyOtpMutation = useVerifyRegistrationOtpMutation;
