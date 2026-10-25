@@ -1,6 +1,6 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
-import { isDemoAuthEnabled } from "@/src/utils/demoAuth";
+import { isDemoAuthEnabled } from "@/utils/demoAuth";
 
 import { ReactNode } from "react";
 
