@@ -4,22 +4,68 @@ import AuthLayout from "@/components/Auth/AuthLayout";
 import Form from "@/components/Form/Form";
 import NPassword from "@/components/Form/NPassword";
 import { Button } from "@/components/ui/button";
+import { useResetPasswordMutation } from "@/redux/api/authApi";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import type { FieldValues } from "react-hook-form";
 
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null && "data" in error) {
+    const data = error.data;
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string"
+    ) {
+      return data.message.replace(/\b\d{6}\b/g, "[code hidden]");
+    }
+  }
+
+  return "Unable to reset your password. Please try again.";
+}
+
 export default function ChangePassword() {
   const [notice, setNotice] = useState("");
+  const [resetPassword, { isLoading }] = useResetPasswordMutation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  function handleSubmit(values: FieldValues) {
-    if (values.password !== values.confirmPassword) {
+  const email = searchParams.get("email")?.trim().toLowerCase() ?? "";
+  const otp = searchParams.get("otp") ?? "";
+
+  async function handleSubmit(values: FieldValues): Promise<void> {
+    const password = String(values.password ?? "");
+    const confirmPassword = String(values.confirmPassword ?? "");
+
+    if (password.length < 8) {
+      setNotice("Your password must contain at least 8 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
       setNotice("Your passwords don’t match. Please check both fields.");
       return;
     }
 
-    setNotice(
-      "Password reset isn’t connected yet. Your password has not been changed.",
-    );
+    if (!email || !/^\d{6}$/.test(otp)) {
+      setNotice("Your verification session is missing. Please verify your email again.");
+      return;
+    }
+
+    if (isLoading) return;
+
+    setNotice("");
+
+    try {
+      await resetPassword({ email, otp, password }).unwrap();
+
+      router.replace("/login?passwordReset=success");
+    } catch (error: unknown) {
+      setNotice(getErrorMessage(error));
+    }
   }
 
   return (
@@ -60,7 +106,7 @@ export default function ChangePassword() {
 
         {notice && (
           <p
-            role="status"
+            role="alert"
             className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900"
           >
             {notice}
@@ -69,15 +115,16 @@ export default function ChangePassword() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-lg bg-[#0F888D] text-sm font-semibold text-white shadow-md shadow-[#0F888D]/15 transition-colors hover:bg-[#0C7479]"
+          disabled={isLoading}
+          className="h-12 w-full rounded-lg bg-[#0F888D] text-sm font-semibold text-white shadow-md shadow-[#0F888D]/15 transition-colors hover:bg-[#0C7479] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Reset password
+          {isLoading ? "Resetting password..." : "Reset password"}
         </Button>
       </Form>
 
       <p className="mt-6 text-center text-sm">
         <Link
-          href="/forgot-password/otp"
+          href={`/forgot-password/otp?email=${encodeURIComponent(email)}`}
           className="font-semibold text-[#0F888D] hover:text-[#0B6D72] hover:underline"
         >
           Back to verification

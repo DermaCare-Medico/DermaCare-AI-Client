@@ -1,8 +1,10 @@
-﻿import NextAuthSessionProvider from "@/lib/NextAuthSessionProvider";
+﻿
 import ReduxProvider from "@/redux/ReduxProvider";
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import { Toaster } from "sonner";
+
+import NextAuthSessionProvider from "../../lib/NextAuthSessionProvider";
 import brandLogo from "@/src/favicon.ico";
 import "./globals.css";
 

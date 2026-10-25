@@ -4,16 +4,52 @@ import AuthLayout from "@/components/Auth/AuthLayout";
 import Form from "@/components/Form/Form";
 import NInput from "@/components/Form/NInput";
 import { Button } from "@/components/ui/button";
+import { useForgotPasswordMutation } from "@/redux/api/authApi";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { FieldValues } from "react-hook-form";
+
+function getErrorMessage(error: unknown): string {
+  if (typeof error === "object" && error !== null && "data" in error) {
+    const data = error.data;
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string"
+    ) {
+      return data.message.replace(/\b\d{6}\b/g, "[code hidden]");
+    }
+  }
+
+  return "Unable to request a verification code. Please try again.";
+}
 
 export default function ForgotPassword() {
   const [notice, setNotice] = useState("");
+  const [noticeType, setNoticeType] = useState<"success" | "error">("error");
+  const [requestOtp, { isLoading }] = useForgotPasswordMutation();
+  const router = useRouter();
 
-  function handleSubmit() {
-    setNotice(
-      "Password recovery isn’t connected yet. No verification code has been sent.",
-    );
+  async function handleSubmit(values: FieldValues): Promise<void> {
+    const email = String(values.email ?? "").trim().toLowerCase();
+
+    if (!email || isLoading) return;
+
+    setNotice("");
+
+    try {
+      await requestOtp({ email }).unwrap();
+
+      setNoticeType("success");
+      setNotice("If an account exists for this email, a verification code has been sent.");
+      router.push(`/forgot-password/otp?email=${encodeURIComponent(email)}`);
+    } catch (error: unknown) {
+      setNoticeType("error");
+      setNotice(getErrorMessage(error));
+    }
   }
 
   return (
@@ -49,7 +85,11 @@ export default function ForgotPassword() {
         {notice && (
           <p
             role="status"
-            className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900"
+            className={`mb-4 rounded-lg border px-4 py-3 text-xs leading-5 ${
+              noticeType === "success"
+                ? "border-teal-200 bg-teal-50 text-teal-900"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}
           >
             {notice}
           </p>
@@ -57,9 +97,10 @@ export default function ForgotPassword() {
 
         <Button
           type="submit"
-          className="h-12 w-full rounded-lg bg-[#0F888D] text-sm font-semibold text-white shadow-md shadow-[#0F888D]/15 transition-colors hover:bg-[#0C7479]"
+          disabled={isLoading}
+          className="h-12 w-full rounded-lg bg-[#0F888D] text-sm font-semibold text-white shadow-md shadow-[#0F888D]/15 transition-colors hover:bg-[#0C7479] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Send verification code
+          {isLoading ? "Sending code..." : "Send verification code"}
         </Button>
       </Form>
 
