@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Star, ShieldCheck, ArrowUpRight, Sparkles, Calendar } from "lucide-react";
+import { Star, ShieldCheck, Sparkles, Calendar } from "lucide-react";
+import { Button, ButtonArrow } from "@/components/ui/button";
 
 interface Doctor {
   id: string;
@@ -73,16 +74,16 @@ const doctors: Doctor[] = [
 
 export default function FeaturedDoctorsSection() {
   return (
-    <section className="w-full bg-[#F7F9FC] py-20 px-6 md:px-12 lg:px-24 font-sans text-[#172033]">
+    <section className="w-full bg-transparent px-4 py-20 font-sans text-[#172033] sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto flex flex-col gap-10">
         
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-[#E2E8F0] pb-6">
           <div className="flex flex-col gap-1.5">
-            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F888D] bg-[#0F888D]/10 px-3 py-1 rounded-full w-fit">
+            {/* <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F888D] bg-[#0F888D]/10 px-3 py-1 rounded-full w-fit">
               <Sparkles className="w-3.5 h-3.5" />
               <span>AI-Matched Specialists</span>
-            </div>
+            </div> */}
             <h2 className="text-3xl sm:text-4xl font-bold text-[#0F2942] tracking-tight">
               Featured Doctors
             </h2>
@@ -91,13 +92,9 @@ export default function FeaturedDoctorsSection() {
             </p>
           </div>
 
-          <Link
-            href="/doctors"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#0F888D] hover:text-[#0c6b6f] transition-colors group"
-          >
-            <span>View All Doctors</span>
-            <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </Link>
+          <Button asChild variant="cta">
+            <Link href="/doctors">View All Doctors <ButtonArrow /></Link>
+          </Button>
         </div>
 
         {/* Doctor Cards Grid */}
@@ -126,9 +123,9 @@ export default function FeaturedDoctorsSection() {
                   </div>
 
                   {/* AI Match Badge */}
-                  <div className="inline-flex items-center gap-1 bg-[#0F888D] text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm">
+                  {/* <div className="inline-flex items-center gap-1 bg-[#0F888D] text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm">
                     <span>{doctor.matchScore}% Match</span>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Doctor Overlay Info */}
@@ -182,12 +179,9 @@ export default function FeaturedDoctorsSection() {
                     </span>
                   </div>
 
-                  <Link
-                    href={`/doctors/${doctor.id}`}
-                    className="w-full text-center py-2.5 rounded-xl bg-[#0F888D] hover:bg-[#0c6b6f] text-white font-semibold text-xs transition-colors shadow-sm"
-                  >
-                    View Profile & Book
-                  </Link>
+                  <Button asChild size="sm" className="w-full">
+                    <Link href={`/doctors/${doctor.id}`}>View Profile &amp; Book</Link>
+                  </Button>
                 </div>
 
               </div>
@@ -196,9 +190,9 @@ export default function FeaturedDoctorsSection() {
         </div>
 
         {/* Footer Disclaimer */}
-        <p className="text-xs text-[#64748B] text-center mt-2">
+        {/* <p className="text-xs text-[#64748B] text-center mt-2">
           Ratings, fees, and AI match scores are based on real patient evaluations and preliminary skin assessment alignment.
-        </p>
+        </p> */}
 
       </div>
     </section>

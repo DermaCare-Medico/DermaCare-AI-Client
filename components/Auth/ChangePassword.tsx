@@ -60,7 +60,7 @@ export default function ChangePassword() {
     setNotice("");
 
     try {
-      await resetPassword({ email, otp, password }).unwrap();
+      await resetPassword({ email, otp, newPassword: password }).unwrap();
 
       router.replace("/login?passwordReset=success");
     } catch (error: unknown) {

@@ -1,4 +1,3 @@
-
 "use client";
 
 import Footer from "@/components/Common/Footer/Footer";
@@ -8,97 +7,103 @@ import {
   type RegisterRequest,
   useRegisterMutation,
 } from "@/redux/api/authApi";
-import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  HeartPulse,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { isDemoAuthEnabled, persistDemoRegistration } from "@/src/utils/demoAuth";
+import { Eye, EyeOff, FileCheck2, UploadCloud, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import styles from "../auth.module.css";
 
-interface RegistrationValues {
+type Role = Extract<RegistrationRole, "PATIENT" | "DOCTOR">;
+type CoreField =
+  | "name"
+  | "email"
+  | "password"
+  | "confirmPassword"
+  | "termsAccepted"
+  | "privacyConsent"
+  | "healthConsent";
+type CoreValues = {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  role: RegistrationRole;
   termsAccepted: boolean;
   privacyConsent: boolean;
   healthConsent: boolean;
-  marketingUpdates: boolean;
-}
+};
+type Errors = Partial<Record<CoreField, string>>;
+type UploadKey = "license" | "supporting";
+type Upload = { name: string; size: string; previewUrl?: string };
 
-type RegistrationField = keyof RegistrationValues;
-type FieldErrors = Partial<Record<RegistrationField, string>>;
-
-const initialValues: RegistrationValues = {
+const initialValues: CoreValues = {
   name: "",
   email: "",
   password: "",
   confirmPassword: "",
-  role: "PATIENT",
   termsAccepted: false,
   privacyConsent: false,
   healthConsent: false,
-  marketingUpdates: false,
 };
 
-function validate(values: RegistrationValues): FieldErrors {
-  const errors: FieldErrors = {};
+const emptyProfile = {
+  phone: "",
+  dateOfBirth: "",
+  gender: "",
+  address: "",
+  allergies: "",
+  conditions: "",
+  medicines: "",
+  specialization: "",
+  licenseNumber: "",
+  experience: "",
+  fee: "",
+  qualifications: "",
+  institution: "",
+};
+
+function validate(values: CoreValues): Errors {
+  const errors: Errors = {};
   const name = values.name.trim();
   const email = values.email.trim();
 
-  if (!name) {
-    errors.name = "Please enter your full name.";
-  } else if (name.length < 2 || name.length > 150) {
+  if (!name) errors.name = "Please enter your full name.";
+  else if (name.length < 2 || name.length > 150)
     errors.name = "Name must be between 2 and 150 characters.";
-  }
 
-  if (!email) {
-    errors.email = "Please enter your email address.";
-  } else if (
-    email.length > 255 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
+  if (!email) errors.email = "Please enter your email address.";
+  else if (email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     errors.email = "Enter a valid email address.";
-  }
 
-  if (!values.password) {
-    errors.password = "Please enter a password.";
-  } else if (
+  if (!values.password) errors.password = "Please enter a password.";
+  else if (
     values.password.length < 8 ||
     values.password.length > 128 ||
     !/[A-Za-z]/.test(values.password) ||
     !/[0-9]/.test(values.password)
   ) {
-    errors.password =
-      "Use 8–128 characters with at least one letter and one number.";
+    errors.password = "Use 8–128 characters with at least one letter and one number.";
   }
 
-  if (!values.confirmPassword) {
+  if (!values.confirmPassword)
     errors.confirmPassword = "Please confirm your password.";
-  } else if (values.confirmPassword !== values.password) {
+  else if (values.confirmPassword !== values.password)
     errors.confirmPassword = "Passwords do not match.";
-  }
 
-  if (!values.termsAccepted) {
-    errors.termsAccepted =
-      "You must accept the Terms of Service and Privacy Policy.";
-  }
-
-  if (!values.privacyConsent) {
-    errors.privacyConsent =
-      "Please confirm you understand how your information is processed.";
-  }
-
-  if (!values.healthConsent) {
-    errors.healthConsent =
-      "Please provide your consent for processing health information.";
-  }
+  if (!values.termsAccepted)
+    errors.termsAccepted = "You must accept the Terms of Service.";
+  if (!values.privacyConsent)
+    errors.privacyConsent = "You must accept the Privacy Policy.";
+  if (!values.healthConsent)
+    errors.healthConsent = "Health consent is required.";
 
   return errors;
 }
@@ -106,7 +111,6 @@ function validate(values: RegistrationValues): FieldErrors {
 function apiErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "data" in error) {
     const data = error.data;
-
     if (
       typeof data === "object" &&
       data !== null &&
@@ -116,501 +120,372 @@ function apiErrorMessage(error: unknown): string {
       return data.message.replace(/\b\d{6}\b/g, "[code hidden]");
     }
   }
-
   return "We couldn’t create your account right now. Please try again.";
 }
 
 export default function RegisterPage() {
-  const [values, setValues] = useState(initialValues);
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [touched, setTouched] = useState<
-    Partial<Record<RegistrationField, boolean>>
-  >({});
+  const demoMode = isDemoAuthEnabled();
+  const [role, setRole] = useState<Role>("PATIENT");
+  const [values, setValues] = useState<CoreValues>(initialValues);
+  const [profile, setProfile] = useState(emptyProfile);
+  const [uploads, setUploads] = useState<Partial<Record<UploadKey, Upload>>>({});
+  const [errors, setErrors] = useState<Errors>({});
+  const [touched, setTouched] = useState<Partial<Record<CoreField, boolean>>>({});
   const [submitted, setSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [requestError, setRequestError] = useState("");
-
-  const submissionInFlight = useRef(false);
+  const submitting = useRef(false);
   const [register, { isLoading }] = useRegisterMutation();
 
-  function updateValue<K extends RegistrationField>(
-    field: K,
-    value: RegistrationValues[K],
-  ) {
-    const nextValues = { ...values, [field]: value };
+  useEffect(() => {
+    return () => {
+      Object.values(uploads).forEach((file) => {
+        if (file?.previewUrl) URL.revokeObjectURL(file.previewUrl);
+      });
+    };
+  }, [uploads]);
 
-    setValues(nextValues);
-    setErrors(validate(nextValues));
+  function updateCore<K extends CoreField>(field: K, value: CoreValues[K]) {
+    const next = { ...values, [field]: value };
+    setValues(next);
+    setErrors(validate(next));
     setRequestError("");
   }
 
-  function fieldError(field: RegistrationField) {
+  function updateProfile(field: keyof typeof emptyProfile, value: string) {
+    setProfile((current) => ({ ...current, [field]: value }));
+  }
+
+  function fieldError(field: CoreField) {
     return submitted || touched[field] ? errors[field] : undefined;
+  }
+
+  function selectRole(next: Role) {
+    if (demoMode && next === "DOCTOR") return;
+    setRole(next);
+  }
+
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const next: Role =
+      event.key === "Home"
+        ? "PATIENT"
+        : event.key === "End"
+          ? "DOCTOR"
+          : role === "PATIENT"
+            ? "DOCTOR"
+            : "PATIENT";
+    if (demoMode && next === "DOCTOR") return;
+    selectRole(next);
+    document.getElementById(`register-tab-${next.toLowerCase()}`)?.focus();
+  }
+
+  function selectFile(key: UploadKey, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const validType = ["application/pdf", "image/jpeg", "image/png"].includes(file.type);
+    if (!validType || file.size > 5 * 1024 * 1024) {
+      setRequestError("Upload a PDF, JPG or PNG file no larger than 5 MB.");
+      event.target.value = "";
+      return;
+    }
+    setRequestError("");
+    setUploads((current) => ({
+      ...current,
+      [key]: {
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        previewUrl: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : undefined,
+      },
+    }));
+    event.target.value = "";
+  }
+
+  function removeFile(key: UploadKey) {
+    setUploads((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (submissionInFlight.current || isLoading) return;
+    if (submitting.current || isLoading) return;
 
     const nextErrors = validate(values);
-
     setErrors(nextErrors);
     setSubmitted(true);
-
     if (Object.keys(nextErrors).length > 0) return;
 
-    submissionInFlight.current = true;
+    submitting.current = true;
     setRequestError("");
 
+    // Match the upstream API contract. Profile fields and document previews
+    // are intentionally NOT sent until the backend supports those endpoints.
     const payload: RegisterRequest = {
       name: values.name.trim(),
       email: values.email.trim().toLowerCase(),
       password: values.password,
-      role: values.role,
+      role,
       acceptTerms: true,
       acceptPrivacy: true,
       acceptHealthConsent: true,
     };
 
     try {
+      if (demoMode) {
+        persistDemoRegistration(payload.email, payload.name, "PATIENT");
+        window.location.assign(
+          `/verify-email?email=${encodeURIComponent(payload.email)}&role=${role}&demo=1`,
+        );
+        return;
+      }
       await register(payload).unwrap();
-
       window.location.assign(
-        `/verify-email?email=${encodeURIComponent(payload.email)}`,
+        `/verify-email?email=${encodeURIComponent(payload.email)}&role=${role}`,
       );
     } catch (error: unknown) {
       setRequestError(apiErrorMessage(error));
-      submissionInFlight.current = false;
+    } finally {
+      submitting.current = false;
     }
   }
 
   return (
     <>
-      <Navbar />
+      <Navbar variant="minimal" />
+      <main className={`${styles.page} ${styles.registerPage}`}>
+        <section className={styles.registerCard} aria-labelledby="register-heading">
+          <div className={styles.registerTabs} role="tablist" aria-label="Choose account type">
+            <RoleTab roleValue="PATIENT" current={role} disabled={false} onSelect={selectRole} onKeyDown={handleTabKeyDown} />
+            <RoleTab roleValue="DOCTOR" current={role} disabled={demoMode} onSelect={selectRole} onKeyDown={handleTabKeyDown} />
+          </div>
 
-      <main className={styles.page}>
-        <div className={styles.container}>
-          <div className={styles.layout}>
-            <section
-              className={styles.formCard}
-              aria-labelledby="register-heading"
-            >
-              <div className={styles.cardHeading}>
-                <h1 className={styles.heading} id="register-heading">
-                  Create your account
-                </h1>
+          <header className={styles.registerHeader}>
+            <h1 className={styles.heading} id="register-heading">Create your account</h1>
+            <p className={styles.registerDescription}>
+              {role === "DOCTOR"
+                ? "Create your professional account to begin the doctor verification process."
+                : "Create your patient account to access personalized skin-care services."}
+            </p>
+            {demoMode && (
+              <p className={`${styles.notice} ${styles.noticeError}`} role="status">
+                Demo mode supports patient accounts only.
+              </p>
+            )}
+          </header>
 
-                <p className={styles.subheading}>
-                  A more thoughtful way to care for your skin starts here.
-                </p>
-              </div>
-
-              <form noValidate onSubmit={handleSubmit}>
-                <div className={styles.fields}>
-                  <div className={`${styles.field} ${styles.fieldFull}`}>
-                    <label className={styles.label} htmlFor="full-name">
-                      Full name
-                    </label>
-
-                    <input
-                      autoComplete="name"
-                      className={styles.input}
-                      id="full-name"
-                      maxLength={150}
-                      aria-invalid={Boolean(fieldError("name"))}
-                      aria-describedby={
-                        fieldError("name") ? "name-error" : undefined
-                      }
-                      onBlur={() =>
-                        setTouched((state) => ({ ...state, name: true }))
-                      }
-                      onChange={(event) =>
-                        updateValue("name", event.target.value)
-                      }
-                      placeholder="Your full name"
-                      required
-                      value={values.name}
-                    />
-
-                    {fieldError("name") && (
-                      <p className={styles.error} id="name-error">
-                        {fieldError("name")}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={`${styles.field} ${styles.fieldFull}`}>
-                    <label className={styles.label} htmlFor="email">
-                      Email address
-                    </label>
-
-                    <input
-                      autoComplete="email"
-                      className={styles.input}
-                      id="email"
-                      type="email"
-                      aria-invalid={Boolean(fieldError("email"))}
-                      aria-describedby={
-                        fieldError("email") ? "email-error" : undefined
-                      }
-                      onBlur={() =>
-                        setTouched((state) => ({ ...state, email: true }))
-                      }
-                      onChange={(event) =>
-                        updateValue("email", event.target.value)
-                      }
-                      placeholder="you@example.com"
-                      required
-                      value={values.email}
-                    />
-
-                    {fieldError("email") && (
-                      <p className={styles.error} id="email-error">
-                        {fieldError("email")}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={styles.field}>
-                    <label className={styles.label} htmlFor="password">
-                      Password
-                    </label>
-
-                    <div className={styles.passwordWrap}>
-                      <input
-                        autoComplete="new-password"
-                        className={`${styles.input} ${styles.passwordInput}`}
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        aria-invalid={Boolean(fieldError("password"))}
-                        aria-describedby={
-                          fieldError("password")
-                            ? "password-error"
-                            : "password-hint"
-                        }
-                        onBlur={() =>
-                          setTouched((state) => ({
-                            ...state,
-                            password: true,
-                          }))
-                        }
-                        onChange={(event) =>
-                          updateValue("password", event.target.value)
-                        }
-                        placeholder="Create a password"
-                        required
-                        value={values.password}
-                      />
-
-                      <button
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                        className={styles.showPassword}
-                        onClick={() =>
-                          setShowPassword((visible) => !visible)
-                        }
-                        type="button"
-                      >
-                        {showPassword ? (
-                          <EyeOff size={17} />
-                        ) : (
-                          <Eye size={17} />
-                        )}
-                      </button>
-                    </div>
-
-                    {fieldError("password") ? (
-                      <p className={styles.error} id="password-error">
-                        {fieldError("password")}
-                      </p>
-                    ) : (
-                      <p className={styles.hint} id="password-hint">
-                        8–128 characters, with at least one letter and one
-                        number.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={styles.field}>
-                    <label
-                      className={styles.label}
-                      htmlFor="confirm-password"
-                    >
-                      Confirm password
-                    </label>
-
-                    <div className={styles.passwordWrap}>
-                      <input
-                        autoComplete="new-password"
-                        className={`${styles.input} ${styles.passwordInput}`}
-                        id="confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        aria-invalid={Boolean(
-                          fieldError("confirmPassword"),
-                        )}
-                        aria-describedby={
-                          fieldError("confirmPassword")
-                            ? "confirm-password-error"
-                            : undefined
-                        }
-                        onBlur={() =>
-                          setTouched((state) => ({
-                            ...state,
-                            confirmPassword: true,
-                          }))
-                        }
-                        onChange={(event) =>
-                          updateValue("confirmPassword", event.target.value)
-                        }
-                        placeholder="Re-enter password"
-                        required
-                        value={values.confirmPassword}
-                      />
-
-                      <button
-                        aria-label={
-                          showConfirmPassword
-                            ? "Hide confirm password"
-                            : "Show confirm password"
-                        }
-                        className={styles.showPassword}
-                        onClick={() =>
-                          setShowConfirmPassword((visible) => !visible)
-                        }
-                        type="button"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff size={17} />
-                        ) : (
-                          <Eye size={17} />
-                        )}
-                      </button>
-                    </div>
-
-                    {fieldError("confirmPassword") && (
-                      <p
-                        className={styles.error}
-                        id="confirm-password-error"
-                      >
-                        {fieldError("confirmPassword")}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={`${styles.field} ${styles.fieldFull}`}>
-                    <label className={styles.label} htmlFor="role">
-                      I’m joining as a
-                    </label>
-
-                    <select
-                      className={styles.select}
-                      id="role"
-                      onChange={(event) =>
-                        updateValue(
-                          "role",
-                          event.target.value as RegistrationRole,
-                        )
-                      }
-                      value={values.role}
-                    >
-                      <option value="PATIENT">Patient</option>
-                      <option value="DOCTOR">Doctor</option>
-                    </select>
-
-                    <p className={styles.hint}>
-                      Doctor accounts remain pending until approved by an
-                      administrator.
-                    </p>
-                  </div>
-                </div>
-
-                <div className={styles.consents}>
-                  <label className={styles.checkboxRow} htmlFor="terms">
-                    <input
-                      checked={values.termsAccepted}
-                      className={styles.checkbox}
-                      id="terms"
-                      onChange={(event) =>
-                        updateValue("termsAccepted", event.target.checked)
-                      }
-                      type="checkbox"
-                      required
-                    />
-
-                    <span>
-                      I agree to the{" "}
-                      <Link href="/#legal-links">Terms of Service</Link> and{" "}
-                      <Link href="/#legal-links">Privacy Policy</Link>.
-                      {fieldError("termsAccepted") && (
-                        <span className={styles.error} id="terms-error">
-                          {" "}
-                          {fieldError("termsAccepted")}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-
-                  <label
-                    className={styles.checkboxRow}
-                    htmlFor="privacy-consent"
-                  >
-                    <input
-                      checked={values.privacyConsent}
-                      className={styles.checkbox}
-                      id="privacy-consent"
-                      onChange={(event) =>
-                        updateValue("privacyConsent", event.target.checked)
-                      }
-                      type="checkbox"
-                      required
-                    />
-
-                    <span>
-                      I understand how my personal information is used and
-                      processed.
-                      {fieldError("privacyConsent") && (
-                        <span className={styles.error} id="privacy-error">
-                          {" "}
-                          {fieldError("privacyConsent")}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-
-                  <label
-                    className={styles.checkboxRow}
-                    htmlFor="health-consent"
-                  >
-                    <input
-                      checked={values.healthConsent}
-                      className={styles.checkbox}
-                      id="health-consent"
-                      onChange={(event) =>
-                        updateValue("healthConsent", event.target.checked)
-                      }
-                      type="checkbox"
-                      required
-                    />
-
-                    <span>
-                      I consent to the processing of my health information
-                      for skin screening and related care services.
-                      {fieldError("healthConsent") && (
-                        <span className={styles.error} id="health-error">
-                          {" "}
-                          {fieldError("healthConsent")}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-
-                  <label className={styles.checkboxRow} htmlFor="marketing">
-                    <input
-                      checked={values.marketingUpdates}
-                      className={styles.checkbox}
-                      id="marketing"
-                      onChange={(event) =>
-                        updateValue("marketingUpdates", event.target.checked)
-                      }
-                      type="checkbox"
-                    />
-
-                    <span>
-                      Send me occasional product and skin-health updates.
-                      (Optional)
-                    </span>
-                  </label>
-                </div>
-
-                {requestError && (
-                  <p
-                    className={`${styles.notice} ${styles.noticeError}`}
-                    role="alert"
-                  >
-                    {requestError}
-                  </p>
+          <form noValidate onSubmit={handleSubmit}>
+            <section className={styles.formSection} aria-labelledby="account-details">
+              <h2 id="account-details">Account details</h2>
+              <div className={styles.fields}>
+                <InputField id="full-name" label="Full name" value={values.name} onChange={(v) => updateCore("name", v)} onBlur={() => setTouched((s) => ({ ...s, name: true }))} error={fieldError("name")} autoComplete="name" required full />
+                <InputField id="email" label="Email" type="email" value={values.email} onChange={(v) => updateCore("email", v)} onBlur={() => setTouched((s) => ({ ...s, email: true }))} error={fieldError("email")} autoComplete="email" required full />
+                <InputField id="phone" label={`Phone${role === "PATIENT" ? " (optional)" : ""}`} type="tel" value={profile.phone} onChange={(v) => updateProfile("phone", v)} autoComplete="tel" />
+                {role === "PATIENT" && (
+                  <>
+                    <InputField id="date-of-birth" label="Date of birth" type="date" value={profile.dateOfBirth} onChange={(v) => updateProfile("dateOfBirth", v)} />
+                    <SelectField id="gender" label="Gender" value={profile.gender} onChange={(v) => updateProfile("gender", v)} options={["Female", "Male", "Non-binary", "Prefer not to say"]} />
+                    <InputField id="address" label="Address (optional)" value={profile.address} onChange={(v) => updateProfile("address", v)} autoComplete="street-address" />
+                  </>
                 )}
-
-                <button
-                  className={styles.submitButton}
-                  disabled={isLoading}
-                  type="submit"
-                >
-                  {isLoading
-                    ? "Sending verification code…"
-                    : "Create account"}
-
-                  {!isLoading && (
-                    <ArrowRight size={18} aria-hidden="true" />
-                  )}
-                </button>
-
-                <p className={styles.formFooter}>
-                  Already have an account?{" "}
-                  <Link className={styles.textLink} href="/login">
-                    Log in
-                  </Link>
-                </p>
-              </form>
+                <PasswordField id="password" label="Password" value={values.password} visible={showPassword} setVisible={setShowPassword} onChange={(v) => updateCore("password", v)} onBlur={() => setTouched((s) => ({ ...s, password: true }))} error={fieldError("password")} hint="8–128 characters, at least one letter and one number." />
+                <PasswordField id="confirm-password" label="Confirm password" value={values.confirmPassword} visible={showConfirmPassword} setVisible={setShowConfirmPassword} onChange={(v) => updateCore("confirmPassword", v)} onBlur={() => setTouched((s) => ({ ...s, confirmPassword: true }))} error={fieldError("confirmPassword")} />
+              </div>
             </section>
 
-            <aside
-              className={styles.visualPanel}
-              aria-label="About DermaCare AI"
-            >
-              <div className={styles.panelContent}>
-                <p className={styles.eyebrow}>
-                  <HeartPulse size={15} /> Care that starts with you
-                </p>
+            {role === "PATIENT" ? (
+              <section className={styles.formSection} id="patient-form" role="tabpanel" aria-labelledby="register-tab-patient">
+                <h2>Health information <span>Optional · not submitted during registration</span></h2>
+                <div className={styles.fields}>
+                  <TextArea id="allergies" label="Allergies" value={profile.allergies} onChange={(v) => updateProfile("allergies", v)} />
+                  <TextArea id="conditions" label="Existing conditions" value={profile.conditions} onChange={(v) => updateProfile("conditions", v)} />
+                  <TextArea id="medicines" label="Current medicines" value={profile.medicines} onChange={(v) => updateProfile("medicines", v)} full />
+                </div>
+              </section>
+            ) : (
+              <section className={styles.formSection} id="doctor-form" role="tabpanel" aria-labelledby="register-tab-doctor">
+                <div className={styles.sectionTitle}>
+                  <h2>Professional information</h2>
+                  <span>UI preview · not submitted</span>
+                </div>
+                <div className={styles.fields}>
+                  <InputField id="specialization" label="Specialization" value={profile.specialization} onChange={(v) => updateProfile("specialization", v)} />
+                  <InputField id="license-number" label="Medical license number" value={profile.licenseNumber} onChange={(v) => updateProfile("licenseNumber", v)} />
+                  <InputField id="experience" label="Years of experience" type="number" value={profile.experience} onChange={(v) => updateProfile("experience", v)} />
+                  <InputField id="fee" label="Consultation fee (BDT)" type="number" value={profile.fee} onChange={(v) => updateProfile("fee", v)} />
+                  <TextArea id="qualifications" label="Qualifications" value={profile.qualifications} onChange={(v) => updateProfile("qualifications", v)} />
+                  <InputField id="institution" label="Medical College / University" value={profile.institution} onChange={(v) => updateProfile("institution", v)} />
+                  <UploadField id="license-upload" label="Medical license" file={uploads.license} onSelect={(e) => selectFile("license", e)} onRemove={() => removeFile("license")} />
+                  <UploadField id="supporting-upload" label="Supporting document" file={uploads.supporting} onSelect={(e) => selectFile("supporting", e)} onRemove={() => removeFile("supporting")} />
+                </div>
+              </section>
+            )}
 
-                <h2 className={styles.panelTitle}>
-                  Feel more confident about your skin health.
-                </h2>
+            <section className={styles.consentSection} aria-label="Required consents">
+              <Consent id="terms" checked={values.termsAccepted} onChange={(v) => updateCore("termsAccepted", v)} error={fieldError("termsAccepted")}>I accept the <Link href="/#legal-links">Terms of Service</Link>.</Consent>
+              <Consent id="privacy" checked={values.privacyConsent} onChange={(v) => updateCore("privacyConsent", v)} error={fieldError("privacyConsent")}>I accept the <Link href="/#legal-links">Privacy Policy</Link>.</Consent>
+              <Consent id="health-consent" checked={values.healthConsent} onChange={(v) => updateCore("healthConsent", v)} error={fieldError("healthConsent")}>I consent to the processing of my health information.</Consent>
+            </section>
 
-                <p className={styles.panelDescription}>
-                  Get a thoughtful first step toward care, with helpful
-                  screening tools and access to qualified professionals.
-                </p>
-
-                <ul className={styles.benefits}>
-                  <li className={styles.benefit}>
-                    <span className={styles.benefitIcon}>
-                      <Sparkles size={16} />
-                    </span>
-                    Guided, AI-assisted skin screening
-                  </li>
-
-                  <li className={styles.benefit}>
-                    <span className={styles.benefitIcon}>
-                      <HeartPulse size={16} />
-                    </span>
-                    Connect with qualified care teams
-                  </li>
-
-                  <li className={styles.benefit}>
-                    <span className={styles.benefitIcon}>
-                      <ShieldCheck size={16} />
-                    </span>
-                    Your account and consent matter
-                  </li>
-                </ul>
-              </div>
-
-              <div className={styles.panelBottom}>
-                <p className={styles.panelNote}>
-                  AI screening is preliminary and does not replace a diagnosis
-                  or advice from a qualified medical professional.
-                </p>
-              </div>
-            </aside>
-          </div>
-        </div>
+            {requestError && <p className={`${styles.notice} ${styles.noticeError}`} role="alert">{requestError}</p>}
+            <button className={styles.submitButton} disabled={isLoading} type="submit">
+              {isLoading ? "Sending verification code…" : "Create Account"}
+            </button>
+            <p className={styles.formFooter}>Already have an account? <Link className={styles.textLink} href="/login">Log in</Link></p>
+          </form>
+        </section>
       </main>
-
       <Footer />
     </>
+  );
+}
+
+function RoleTab({ roleValue, current, disabled, onSelect, onKeyDown }: {
+  roleValue: Role;
+  current: Role;
+  disabled: boolean;
+  onSelect: (role: Role) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}) {
+  const selected = current === roleValue;
+  return (
+    <button
+      aria-controls={`${roleValue.toLowerCase()}-form`}
+      aria-selected={selected}
+      className={styles.registerTab}
+      disabled={disabled}
+      id={`register-tab-${roleValue.toLowerCase()}`}
+      onClick={() => onSelect(roleValue)}
+      onKeyDown={onKeyDown}
+      role="tab"
+      tabIndex={selected ? 0 : -1}
+      type="button"
+    >
+      {roleValue === "PATIENT" ? "Patient" : "Doctor"}
+    </button>
+  );
+}
+
+function InputField({ id, label, value, onChange, onBlur, error, type = "text", autoComplete, required, full }: {
+  id: string; label: string; value: string; onChange: (value: string) => void;
+  onBlur?: () => void; error?: string; type?: string; autoComplete?: string;
+  required?: boolean; full?: boolean;
+}) {
+  return (
+    <div className={`${styles.field} ${full ? styles.fieldFull : ""}`}>
+      <label className={styles.label} htmlFor={id}>{label}</label>
+      <input
+        aria-describedby={error ? `${id}-error` : undefined}
+        aria-invalid={Boolean(error)}
+        autoComplete={autoComplete}
+        className={styles.input}
+        id={id}
+        min={type === "number" ? "0" : undefined}
+        onBlur={onBlur}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        type={type}
+        value={value}
+      />
+      {error && <p className={styles.error} id={`${id}-error`}>{error}</p>}
+    </div>
+  );
+}
+
+function PasswordField({ id, label, value, visible, setVisible, onChange, onBlur, error, hint }: {
+  id: string; label: string; value: string; visible: boolean;
+  setVisible: (value: boolean) => void; onChange: (value: string) => void;
+  onBlur: () => void; error?: string; hint?: string;
+}) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label} htmlFor={id}>{label}</label>
+      <div className={styles.passwordWrap}>
+        <input
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          aria-invalid={Boolean(error)}
+          autoComplete="new-password"
+          className={`${styles.input} ${styles.passwordInput}`}
+          id={id}
+          onBlur={onBlur}
+          onChange={(e) => onChange(e.target.value)}
+          required
+          type={visible ? "text" : "password"}
+          value={value}
+        />
+        <button aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`} aria-pressed={visible} className={styles.showPassword} onClick={() => setVisible(!visible)} type="button">
+          {visible ? <EyeOff size={17} /> : <Eye size={17} />}
+        </button>
+      </div>
+      {error ? <p className={styles.error} id={`${id}-error`}>{error}</p> : hint && <p className={styles.hint} id={`${id}-hint`}>{hint}</p>}
+    </div>
+  );
+}
+
+function SelectField({ id, label, value, onChange, options }: {
+  id: string; label: string; value: string;
+  onChange: (value: string) => void; options: string[];
+}) {
+  return (
+    <div className={styles.field}>
+      <label className={styles.label} htmlFor={id}>{label}</label>
+      <select className={styles.select} id={id} onChange={(e) => onChange(e.target.value)} value={value}>
+        <option value="">Select</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function TextArea({ id, label, value, onChange, full }: {
+  id: string; label: string; value: string;
+  onChange: (value: string) => void; full?: boolean;
+}) {
+  return (
+    <div className={`${styles.field} ${full ? styles.fieldFull : ""}`}>
+      <label className={styles.label} htmlFor={id}>{label}</label>
+      <textarea className={styles.textarea} id={id} onChange={(e) => onChange(e.target.value)} rows={3} value={value} />
+    </div>
+  );
+}
+
+function UploadField({ id, label, file, onSelect, onRemove }: {
+  id: string; label: string; file?: Upload;
+  onSelect: (event: ChangeEvent<HTMLInputElement>) => void; onRemove: () => void;
+}) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.label}>{label}</span>
+      <label className={styles.compactUpload} htmlFor={id}>
+        {file?.previewUrl ? <Image alt={`${label} preview`} height={48} src={file.previewUrl} unoptimized width={48} /> : <UploadCloud size={22} />}
+        <span>{file ? "Replace file" : "Choose file"}<small>PDF, JPG or PNG · max 5 MB · local preview only</small></span>
+        <input accept=".pdf,image/jpeg,image/png" className={styles.srOnly} id={id} onChange={onSelect} type="file" />
+      </label>
+      {file && (
+        <div className={styles.compactFile}>
+          <FileCheck2 size={15} />
+          <span title={file.name}>{file.name} · {file.size}</span>
+          <button aria-label={`Remove ${label}`} onClick={onRemove} type="button"><X size={15} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Consent({ id, checked, onChange, error, children }: {
+  id: string; checked: boolean; onChange: (value: boolean) => void;
+  error?: string; children: ReactNode;
+}) {
+  return (
+    <label className={styles.checkboxRow} htmlFor={id}>
+      <input aria-describedby={error ? `${id}-error` : undefined} aria-invalid={Boolean(error)} checked={checked} className={styles.checkbox} id={id} onChange={(e) => onChange(e.target.checked)} required type="checkbox" />
+      <span>{children}{error && <span className={styles.error} id={`${id}-error`}> {error}</span>}</span>
+    </label>
   );
 }

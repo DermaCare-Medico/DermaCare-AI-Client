@@ -12,10 +12,7 @@ import {
 } from "@/redux/api/publicApi";
 import {
   PUBLIC_DEMO_ENABLED,
-  demoDoctorProfiles,
-  demoDoctors,
   demoMedicines,
-  demoPublicSlots,
 } from "@/lib/public/demoData";
 import { extractList, unwrapEnvelope } from "@/types/doctor";
 import type { DoctorListItem, DoctorProfile, DoctorSlot, Medicine } from "@/types/doctor";
@@ -23,9 +20,8 @@ import type { DoctorListItem, DoctorProfile, DoctorSlot, Medicine } from "@/type
 /**
  * Public Pages data hooks.
  *
- * Mirrors the Doctor Module pattern: call the real backend contract, and only
- * fall back to clearly separated demo data when (a) the request failed AND
- * (b) `NEXT_PUBLIC_PUBLIC_DEMO === "true"`. `isDemo` drives the visible notice.
+ * Doctor discovery always uses live backend data. Store demo fallback remains
+ * separately controlled for the unrelated medicine catalog.
  */
 
 export function usePublicDoctors(args?: DoctorSearchArgs) {
@@ -34,16 +30,16 @@ export function usePublicDoctors(args?: DoctorSearchArgs) {
     () => extractList<DoctorListItem>(unwrapEnvelope(query.data)),
     [query.data]
   );
-  const isDemo = query.isError && PUBLIC_DEMO_ENABLED;
+  const isDemo = false;
 
   const rawSearch = args?.search;
   const specialty = args?.specialty;
 
   const doctors = useMemo(() => {
-    if (!isDemo) return live;
     const search = rawSearch?.toLowerCase().trim();
     const specialtyFilter = specialty?.toLowerCase().trim();
-    return demoDoctors.filter((doctor) => {
+    const source = live;
+    return source.filter((doctor) => {
       const matchesSearch =
         !search ||
         doctor.name.toLowerCase().includes(search) ||
@@ -55,7 +51,7 @@ export function usePublicDoctors(args?: DoctorSearchArgs) {
         );
       return matchesSearch && matchesSpecialty;
     });
-  }, [isDemo, live, rawSearch, specialty]);
+  }, [live, rawSearch, specialty]);
 
   return {
     doctors,
@@ -78,8 +74,8 @@ export function usePublicDoctor(doctorId: string | undefined) {
       : undefined;
   }, [query.data]);
 
-  const isDemo = query.isError && PUBLIC_DEMO_ENABLED;
-  const doctor = isDemo && doctorId ? demoDoctorProfiles[doctorId] : live;
+  const isDemo = false;
+  const doctor = live;
 
   return {
     doctor,
@@ -100,8 +96,8 @@ export function usePublicDoctorSlots(doctorId: string | undefined) {
     () => extractList<DoctorSlot>(unwrapEnvelope(query.data)),
     [query.data]
   );
-  const isDemo = query.isError && PUBLIC_DEMO_ENABLED;
-  const slots = isDemo ? demoPublicSlots : live;
+  const isDemo = false;
+  const slots = live;
 
   return {
     slots,

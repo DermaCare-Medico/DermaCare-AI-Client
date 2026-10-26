@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, ArrowRight, Phone, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Phone, ShieldCheck } from "lucide-react";
+import { Button, ButtonArrow } from "@/components/ui/button";
 import img1 from "../../../public/images/doctor.jpg"
 import img2 from "../../../public/images/doctor1.jpg"
 
@@ -15,7 +16,7 @@ export default function WhoWeAreSection() {
   ];
 
   return (
-    <section className="w-full bg-[#F7F9FC] py-16 px-6 md:px-12 lg:px-24 font-sans text-[#172033]">
+    <section className="w-full bg-transparent px-4 py-16 font-sans text-[#172033] sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         
         {/* Left Side: Overlapping Images */}
@@ -32,7 +33,7 @@ export default function WhoWeAreSection() {
           </div>
 
           {/* Overlapping Secondary Image (Bottom Right) */}
-          <div className="absolute -bottom-8 right-2 sm:right-6 w-[220px] sm:w-[260px] h-[160px] sm:h-[180px] rounded-2xl overflow-hidden border-4 border-[#F7F9FC] shadow-xl">
+          <div className="absolute -bottom-8 right-2 sm:right-6 w-[220px] sm:w-[260px] h-[160px] sm:h-[180px] rounded-2xl overflow-hidden border-4 border-[#F8FAF9] shadow-xl">
             <Image
               src={img2}
               alt="Real skin analysis and care"
@@ -81,15 +82,9 @@ export default function WhoWeAreSection() {
           {/* Bottom Action Area */}
           <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-[#E2E8F0] mt-2">
             {/* CTA Button */}
-            <Link
-              href="/#how-it-works"
-              className="inline-flex items-center gap-3 bg-[#0F888D] hover:bg-[#0d7579] text-white px-6 py-3 rounded-full text-sm font-medium transition-all shadow-md group"
-            >
-              <span>Learn How It Works</span>
-              <div className="w-6 h-6 rounded-full bg-white/20 text-white flex items-center justify-center transition-transform group-hover:translate-x-0.5">
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </Link>
+            <Button asChild variant="cta" size="lg">
+              <Link href="/#how-it-works">Learn How It Works <ButtonArrow /></Link>
+            </Button>
 
             {/* Support / Emergency Help Block */}
             <div className="flex items-center gap-3">

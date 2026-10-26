@@ -12,7 +12,7 @@ function Brand() {
       aria-label="DermaCare AI home"
       className="inline-flex w-fit items-center gap-3"
     >
-      <span className="grid size-12 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm">
+      <span className="grid size-12 place-items-center overflow-hidden rounded-2xl shadow-sm">
         <Image src={brandLogo} alt="" sizes="48px" className="size-full object-contain" aria-hidden="true" />
       </span>
       <span className="text-[25px] font-bold tracking-[-0.06em] text-white">

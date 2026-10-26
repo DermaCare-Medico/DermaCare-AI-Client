@@ -1,34 +1,23 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  ChevronDown,
-  HelpCircle,
-  MessageCircle,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, MessageSquareMore } from "lucide-react";
+import { Button, ButtonArrow } from "@/components/ui/button";
 
 const faqs = [
   {
-    question: "What is DermaCare AI?",
+    question: "How does the AI skin screening work?",
     answer:
-      "DermaCare AI is a digital platform designed to make skin health information more accessible through AI-assisted preliminary screening and resources for connecting with dermatology professionals.",
+      "You upload a clear photo of your skin concern, and our AI analyzes visual features such as lesions, color variation, and texture patterns to provide preliminary risk indicators and clinical context. This is intended to support discussions with a doctor, not replace professional judgment.",
   },
   {
-    question: "Can AI diagnose my skin condition?",
+    question: "Is DermaCare AI a replacement for a doctor?",
     answer:
-      "No. AI-generated insights are preliminary and informational only. They cannot confirm a medical condition or replace an examination and advice from a qualified healthcare professional.",
+      "No. DermaCare AI provides educational and preliminary risk indications only. Final diagnosis, treatment plans, and prescriptions must always come from a licensed doctor or dermatologist.",
   },
   {
-    question: "How does AI-assisted skin screening work?",
-    answer:
-      "Depending on the features available, you may be able to submit a skin image for preliminary AI-assisted insights. Results can be limited or inaccurate, so consult a qualified professional about any skin concern.",
-  },
-  {
-    question: "Is my personal information safe?",
+    question: "How is my personal and medical data protected?",
     answer:
       "Please review our Privacy Policy for details about information collection, usage, storage, and sharing. We recommend sharing only the information necessary to use the service.",
   },
@@ -49,9 +38,9 @@ const faqs = [
   },
 ];
 
-type FAQSectionProps = {
+interface FAQSectionProps {
   variant?: "default" | "compact";
-};
+}
 
 export default function FAQSection({
   variant = "default",
@@ -62,21 +51,14 @@ export default function FAQSection({
 
   return (
     <section
-      className={`relative overflow-hidden bg-background ${
+      className={`relative overflow-hidden bg-transparent ${
         isCompact ? "py-14 sm:py-20" : "py-16 sm:py-24"
       }`}
     >
-      {/* Background decoration */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-40 top-20 h-80 w-80 rounded-full bg-primary/[0.06] blur-3xl" />
-        <div className="absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-primary/[0.07] blur-3xl" />
-      </div>
-
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section heading */}
         <div className="mx-auto mb-12 max-w-3xl text-center sm:mb-16">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/[0.06] px-4 py-2 text-xs font-semibold tracking-wide text-primary sm:text-sm">
-            <Sparkles className="h-4 w-4" />
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white px-4 py-2 text-xs font-semibold tracking-wide text-primary shadow-sm sm:text-sm">
             HELP CENTER
           </div>
 
@@ -97,60 +79,9 @@ export default function FAQSection({
           </p>
         </div>
 
-        {/* FAQ layout */}
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
-          {/* Left information panel */}
-          <aside className="relative flex flex-col justify-between overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/[0.10] via-primary/[0.04] to-card p-6 sm:p-8 lg:min-h-[430px]">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-
-            <div className="relative">
-              <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/15 bg-background/80 text-primary shadow-sm">
-                <HelpCircle className="h-7 w-7" />
-              </div>
-
-              <h3 className="max-w-xs text-2xl font-bold leading-snug text-foreground sm:text-3xl">
-                Your skin health questions matter.
-              </h3>
-
-              <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground sm:text-base">
-                Explore how our platform works and learn what to expect before
-                getting started.
-              </p>
-            </div>
-
-            <div className="relative mt-8 space-y-4">
-              <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    AI-assisted insights
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Understand the platform s screening features.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Informed decisions
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Learn about privacy and professional care.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* Right accordion */}
-          <div className="space-y-3">
+        {/* Full-width accordion matching max-w-7xl container */}
+        <div className="w-full">
+          <div className="space-y-3.5">
             {visibleFaqs.map((faq, index) => {
               const isOpen = openIndex === index;
               const answerId = `faq-answer-${isCompact ? "home" : "page"}-${index}`;
@@ -160,8 +91,8 @@ export default function FAQSection({
                   key={faq.question}
                   className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
                     isOpen
-                      ? "border-primary/30 bg-card shadow-lg shadow-primary/[0.05]"
-                      : "border-border/70 bg-card/70 hover:border-primary/25 hover:bg-card"
+                      ? "border-primary/30 bg-white shadow-md shadow-primary/[0.04]"
+                      : "border-border/70 bg-white/90 hover:border-primary/25 hover:bg-white"
                   }`}
                 >
                   <button
@@ -198,71 +129,57 @@ export default function FAQSection({
                     </span>
                   </button>
 
-                  <div
-                    id={answerId}
-                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="ml-[3.25rem] border-t border-border/60 px-4 pb-5 pt-4 sm:ml-[3.75rem] sm:px-5">
-                        <p className="text-sm leading-7 text-muted-foreground">
-                          {faq.answer}
-                        </p>
-                      </div>
+                  {isOpen && (
+                    <div
+                      id={answerId}
+                      className="border-t border-border/50 px-4 pb-5 pt-3 sm:px-5"
+                    >
+                      <p className="text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
+                        {faq.answer}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </article>
               );
             })}
 
-            {/* View all FAQs */}
+            {/* View all FAQs CTA */}
             {isCompact && (
-              <div className="pt-4 text-center sm:text-left">
-                <Link
-                  href="/faq"
-                  className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  View All Questions
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Link>
+              <div className="pt-8 text-center">
+                <Button asChild variant="cta">
+                  <Link href="/faq">View All Questions <ButtonArrow /></Link>
+                </Button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Support card */}
-        <div className="mx-auto mt-12 flex max-w-6xl flex-col gap-5 rounded-3xl border border-border/70 bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:p-7">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <MessageCircle className="h-6 w-6" />
-          </div>
+        {/* Support CTA card - full width */}
+        <div className="mt-14 w-full rounded-3xl border border-primary/15 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <MessageSquareMore className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground sm:text-xl">
+                  Still have questions?
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Our team is here to help guide you through every step.
+                </p>
+              </div>
+            </div>
 
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground">
-              Still have questions?
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Visit our platform or use the available support channels for
-              additional assistance.
-            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild variant="cta">
+                <Link href="/contact">Contact Support <ButtonArrow /></Link>
+              </Button>
+            </div>
           </div>
-
-          <Link
-            href="/contact"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/[0.05] hover:text-primary"
-          >
-            Contact Us
-            <ArrowRight className="h-4 w-4" />
-          </Link>
         </div>
-
-        {/* Medical disclaimer */}
-        <p className="mx-auto mt-7 max-w-3xl text-center text-xs leading-6 text-muted-foreground">
-          DermaCare AI provides preliminary informational insights only. It
-          does not diagnose medical conditions or replace professional medical
-          advice, diagnosis, or treatment.
-        </p>
       </div>
     </section>
   );
 }
+

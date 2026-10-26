@@ -15,7 +15,7 @@ export function MedicineCard({ medicine, detailsHref }: { medicine: Medicine; de
           <Pill size={20} />
         </span>
         <div className="min-w-0">
-          <h3 className="truncate text-base font-bold text-[#0F2942]">
+          <h3 className="truncate text-base font-bold text-[#102d31]">
             {medicine.name}
           </h3>
           <p className="truncate text-xs text-[#64748B]">

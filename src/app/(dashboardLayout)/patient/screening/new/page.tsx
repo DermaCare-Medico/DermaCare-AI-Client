@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, CheckCircle2, ImagePlus, LoaderCircle, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ImagePlus, LoaderCircle, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { formatConfidence, getPredictionFields, useCreateScreeningMutation, useUploadScreeningImageMutation, type ScreeningRecord } from "@/redux/api/screeningApi";
 import styles from "./page.module.css";
 
 const durationOptions = [
@@ -79,8 +80,10 @@ export default function NewSkinScreeningPage() {
   const [imageError, setImageError] = useState("");
   const [errors, setErrors] = useState<Partial<Record<keyof ScreeningFormState, string>>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
   const [demoResult, setDemoResult] = useState<DemoResult | null>(null);
+  const [requestError, setRequestError] = useState("");
+  const [createScreening, createState] = useCreateScreeningMutation();
+  const [uploadImage, uploadState] = useUploadScreeningImageMutation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -175,85 +178,7 @@ export default function NewSkinScreeningPage() {
     return nextErrors;
   };
 
-  const getUrgencyInfo = () => {
-    const textBlock = [
-      formData.feverOrOtherSymptoms,
-      formData.mainSymptom,
-      formData.notes,
-      formData.medicalContext,
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    const hasUrgentText =
-      textBlock.includes("breathing difficulty") ||
-      textBlock.includes("facial swelling") ||
-      textBlock.includes("tongue swelling") ||
-      textBlock.includes("swelling of the face") ||
-      textBlock.includes("swelling of the lips");
-
-    const isUrgentBySigns =
-      formData.redness === "Yes" &&
-      formData.worsening === "Yes" &&
-      (formData.pain === "Yes" || formData.itching === "Yes");
-
-    return {
-      isUrgent: hasUrgentText || isUrgentBySigns,
-      urgentText: hasUrgentText
-        ? "This pattern may need urgent medical attention. Please call emergency services if breathing is difficult or swelling of the face or tongue is occurring."
-        : "These symptoms may need urgent medical attention. Please visit a doctor or emergency service immediately.",
-    };
-  };
-
-  const buildDemoResult = () => {
-    const { isUrgent, urgentText } = getUrgencyInfo();
-
-    if (isUrgent) {
-      return {
-        title: "Safety notice: urgent assessment recommended",
-        summary:
-          "This demo indicates a potentially high-risk pattern based on the reported symptoms and visible signs. It is not a diagnosis and should be reviewed promptly by a clinician.",
-        confidence: "62% demo confidence",
-        urgencyLabel: urgentText,
-        isUrgent: true,
-        showSuggestions: false,
-        suggestions: [],
-      } satisfies DemoResult;
-    }
-
-    const isUncertain =
-      formData.worsening === "Yes" || formData.redness === "Yes" || formData.pain === "Yes";
-
-    if (isUncertain) {
-      return {
-        title: "Skin concern needs clinician review",
-        summary:
-          "This fictional screening suggests a persistent or worsening skin issue. The sample result is not a medical diagnosis and should be reviewed with a clinician if symptoms continue.",
-        confidence: "73% demo confidence",
-        urgencyLabel: "The sample result is uncertain and should be checked by a dermatologist.",
-        isUrgent: false,
-        showSuggestions: false,
-        suggestions: [],
-      } satisfies DemoResult;
-    }
-
-    return {
-      title: "Low risk in this demo review",
-      summary:
-        "Based on the mock information provided, this sample review suggests a relatively mild irritation pattern. This is not a diagnosis and is meant only to illustrate a demo workflow.",
-      confidence: "81% demo confidence",
-      urgencyLabel: "No urgent red flags were identified in this demo.",
-      isUrgent: false,
-      showSuggestions: true,
-      suggestions: [
-        "Track the area over the next few days with updated photos.",
-        "Keep the skin clean, moisturised, and protected from friction or harsh products.",
-        "Speak to a clinician if the condition spreads, worsens, or lasts beyond expected timelines.",
-      ],
-    } satisfies DemoResult;
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextErrors = validateForm();
@@ -264,18 +189,23 @@ export default function NewSkinScreeningPage() {
     }
 
     setIsAnalyzing(true);
-    setDraftSaved(false);
     setDemoResult(null);
-
-    window.setTimeout(() => {
-      setDemoResult(buildDemoResult());
-      setIsAnalyzing(false);
-    }, 1200);
-  };
-
-  const handleSaveDraft = () => {
-    setDraftSaved(true);
-    setDemoResult(null);
+    setRequestError("");
+    try {
+      const symptoms = [formData.mainSymptom, `Area: ${formData.bodyArea}`, `Duration: ${formData.duration}`, formData.notes].filter(Boolean).join(". ");
+      const created = await createScreening({ symptoms, hasBleeding: false, rapidGrowth: formData.worsening === "Yes", hasFever: formData.feverOrOtherSymptoms.toLowerCase().includes("fever"), hasUlceration: false, severePain: formData.pain === "Yes" }).unwrap();
+      const screeningId = created.data.screeningId ?? created.data.id;
+      if (!screeningId) throw new Error("The screening API did not return a screening ID.");
+      const uploaded = await uploadImage({ screeningId, imageType: "FRONT", image: selectedFile }).unwrap();
+      const data: ScreeningRecord = uploaded.data;
+      const prediction = getPredictionFields(data);
+      const risk = String(data.riskLevel ?? "").toUpperCase();
+      setDemoResult({ title: prediction.condition === "Analysis pending" ? "Screening complete" : prediction.condition, summary: data.symptoms ?? "The screening was processed successfully. Open the report from screening history for full details.", confidence: formatConfidence(prediction.confidence), urgencyLabel: risk === "HIGH" ? "The screening is marked high risk. Seek prompt clinical review." : "Follow the care guidance in the screening report.", isUrgent: risk === "HIGH", showSuggestions: false, suggestions: [] });
+    } catch (error) {
+      if (error instanceof Error) setRequestError(error.message);
+      else if (typeof error === "object" && error && "data" in error && typeof error.data === "object" && error.data && "message" in error.data && typeof error.data.message === "string") setRequestError(error.data.message);
+      else setRequestError("The screening could not be completed. Please try again.");
+    } finally { setIsAnalyzing(false); }
   };
 
   const handleReset = () => {
@@ -283,7 +213,6 @@ export default function NewSkinScreeningPage() {
     setFormData(initialFormState);
     setErrors({});
     setImageError("");
-    setDraftSaved(false);
     setDemoResult(null);
   };
 
@@ -312,7 +241,7 @@ export default function NewSkinScreeningPage() {
       </header>
 
       <p className={styles.pageDescription}>
-        This tool provides preliminary screening support only and cannot diagnose skin conditions. It is designed for demo use only.
+        This tool provides preliminary screening support only and cannot diagnose skin conditions.
       </p>
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
@@ -556,7 +485,7 @@ export default function NewSkinScreeningPage() {
           <Button
             type="submit"
             className={styles.primaryButton}
-            disabled={isAnalyzing || !requiredFieldsComplete}
+            disabled={isAnalyzing || createState.isLoading || uploadState.isLoading || !requiredFieldsComplete}
           >
             {isAnalyzing ? (
               <>
@@ -564,23 +493,16 @@ export default function NewSkinScreeningPage() {
                 Analyzing...
               </>
             ) : (
-              "Analyze Skin (Demo)"
+                "Analyze Skin"
             )}
-          </Button>
-          <Button type="button" variant="outline" className={styles.secondaryButton} onClick={handleSaveDraft}>
-            Save as Draft
           </Button>
           <Button type="button" variant="ghost" className={styles.ghostButton} onClick={handleReset}>
             Start New Screening
           </Button>
         </div>
 
-        {draftSaved ? (
-          <div className={styles.successBanner} role="status">
-            <CheckCircle2 size={16} />
-            Draft saved in local mock state only.
-          </div>
-        ) : null}
+        {requestError ? <p className={styles.errorText} role="alert">{requestError}</p> : null}
+
       </form>
 
       {demoResult ? (
@@ -596,7 +518,7 @@ export default function NewSkinScreeningPage() {
             <strong>{demoResult.confidence}</strong>
           </div>
           <p className={styles.disclaimerText}>
-            This sample result is fictional demo content and has not been generated by a real AI model. It is not a diagnosis and does not replace a professional assessment.
+            This result was returned by the screening service. It is not a diagnosis and does not replace a professional assessment.
           </p>
 
           {demoResult.isUrgent ? (

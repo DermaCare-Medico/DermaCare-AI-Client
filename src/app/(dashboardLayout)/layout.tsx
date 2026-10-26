@@ -162,7 +162,7 @@ export default function DashboardLayout({
         </header>
 
         <main className="min-h-[calc(100vh-4.5rem)] p-4 sm:p-6 lg:p-8">
-          {children}
+          <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </SidebarInset>
     </SidebarProvider>

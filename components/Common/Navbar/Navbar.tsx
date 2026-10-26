@@ -2,14 +2,28 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRef, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useRef, useState, useSyncExternalStore } from "react";
+import { ArrowLeft, LogIn, Menu, UserPlus, X } from "lucide-react";
 import brandLogo from "@/src/favicon.ico";
 import styles from "./Navbar.module.css";
+import { Button } from "@/components/ui/button";
+import { useAppSelector } from "@/redux/hooks";
+import { NavUser } from "@/components/shared/nav-user";
 
-const Navbar = () => {
+const emptySubscribe = () => () => {};
+
+const Navbar = ({ variant = "default" }: { variant?: "default" | "minimal" }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const token = useAppSelector((state) => state.auth.token);
+  const isHydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+
+  const isAuthenticated = isHydrated && Boolean(token);
+
   const links = [
     { label: "Home", href: "/#home" },
     { label: "Doctors", href: "/doctors" },
@@ -20,6 +34,23 @@ const Navbar = () => {
     { label: "Contact", href: "/contact" },
     { label: "Disclaimer", href: "/disclaimer" },
   ];
+
+  if (variant === "minimal") {
+    return (
+      <header className={`${styles.header} ${styles.minimalHeader}`}>
+        <div className={`${styles.inner} ${styles.minimalInner}`}>
+          <Link className={styles.brand} href="/" aria-label="DermaCare AI home">
+            <span className={styles.brandMark} aria-hidden="true"><Image src={brandLogo} alt="" sizes="38px" priority /></span>
+            <span>DermaCare <strong>AI</strong></span>
+          </Link>
+          <Link className={styles.backHome} href="/">
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back to Home
+          </Link>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className={styles.header}>
@@ -64,13 +95,40 @@ const Navbar = () => {
               </Link>
             ))}
           </div>
+
           <div className={styles.actions}>
-            <Link className={styles.loginButton} href="/login" onClick={() => setMenuOpen(false)}>
-              Log in
-            </Link>
-            <Link className={styles.registerButton} href="/register" onClick={() => setMenuOpen(false)}>
-              Register
-            </Link>
+            {!isHydrated ? (
+              <div
+                className={`${styles.authActions} size-10 rounded-full bg-slate-100/70 animate-pulse justify-self-end`}
+                aria-hidden="true"
+              />
+            ) : isAuthenticated ? (
+              <div className={styles.authActions}>
+                <NavUser
+                  variant="navbar"
+                  onNavigate={() => setMenuOpen(false)}
+                />
+              </div>
+            ) : (
+              <>
+                <Button asChild variant="cta" size="sm">
+                  <Link href="/login" onClick={() => setMenuOpen(false)}>
+                    Log in{" "}
+                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-primary">
+                      <LogIn className="size-4" />
+                    </span>
+                  </Link>
+                </Button>
+                <Button asChild variant="cta" size="sm">
+                  <Link href="/register" onClick={() => setMenuOpen(false)}>
+                    Register{" "}
+                    <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-primary">
+                      <UserPlus className="size-4" />
+                    </span>
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </nav>
       </div>

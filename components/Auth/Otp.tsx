@@ -56,7 +56,7 @@ export default function Otp() {
       await verifyOtp({ email, otp }).unwrap();
 
       router.push(
-        `/forgot-password/reset?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`,
+        `/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`,
       );
     } catch (error: unknown) {
       setNotice(getErrorMessage(error));

@@ -33,7 +33,7 @@ export default function AllDoctorsPage() {
     usePublicDoctors(args);
 
   return (
-    <section className="min-h-screen bg-[#F7F9FC] px-6 py-16 font-sans text-[#172033] md:px-12 lg:px-24">
+    <section className="min-h-screen bg-[#F7F9FC] px-4 py-16 font-sans text-[#172033] sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-10">
         <header className="flex flex-col gap-2">
           <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#0F888D]/10 px-3 py-1 text-xs font-semibold text-[#0F888D]">

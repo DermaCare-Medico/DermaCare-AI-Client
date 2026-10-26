@@ -6,9 +6,14 @@ import NPassword from "@/components/Form/NPassword";
 import { Button } from "@/components/ui/button";
 import AuthLayout from "@/components/Auth/AuthLayout";
 import { useLoginMutation } from "@/redux/api/authApi";
+import Navbar from "@/components/Common/Navbar/Navbar";
+import Footer from "@/components/Common/Footer/Footer";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import type { FieldValues } from "react-hook-form";
+import { useAppDispatch } from "@/redux/hooks";
+import { setSession } from "@/redux/features/authSlice";
+import { dashboardForRole, sessionFromResponse } from "@/src/utils/auth";
 
 function getApiErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "data" in error) {
@@ -31,6 +36,7 @@ export default function LoginPage() {
   const [notice, setNotice] = useState("");
   const [login, { isLoading }] = useLoginMutation();
   const submitting = useRef(false);
+  const dispatch = useAppDispatch();
 
   async function handleSubmit(values: FieldValues): Promise<void> {
     if (submitting.current || isLoading) return;
@@ -50,18 +56,19 @@ export default function LoginPage() {
     setNotice("");
 
     try {
-      await login({ email, password }).unwrap();
-
-      // Continue through the application's existing auth/session flow.
-      window.location.assign("/");
+      const response = await login({ email, password }).unwrap();
+      const session = sessionFromResponse(response);
+      if (!session) throw new Error("The server did not return a complete session.");
+      dispatch(setSession(session));
+      window.location.assign(dashboardForRole(session.user?.role));
     } catch (error: unknown) {
-      setNotice(getApiErrorMessage(error));
+      setNotice(error instanceof Error ? error.message : getApiErrorMessage(error));
       submitting.current = false;
     }
   }
 
   return (
-    <AuthLayout>
+    <><Navbar variant="minimal" /><AuthLayout>
       <div className="mb-8">
         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.17em] text-[#0F888D]">
           Welcome back
@@ -124,7 +131,7 @@ export default function LoginPage() {
         <Button
           type="submit"
           disabled={isLoading}
-          className="h-12 w-full rounded-lg bg-[#0F888D] text-sm font-semibold text-white shadow-md shadow-[#0F888D]/15 transition-colors hover:bg-[#0C7479] disabled:cursor-not-allowed disabled:opacity-60"
+          className="h-12 w-full"
         >
           {isLoading ? "Signing in..." : "Sign in"}
         </Button>
@@ -139,6 +146,6 @@ export default function LoginPage() {
           Sign up
         </Link>
       </p>
-    </AuthLayout>
+    </AuthLayout><Footer /></>
   );
 }
