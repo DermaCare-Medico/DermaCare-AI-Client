@@ -1,81 +1,37 @@
+import { decodeJwt } from "jose";
 import { NextRequest, NextResponse } from "next/server";
 
-interface IUser {
-  id: string;
-  email: string;
-  role: "ADMIN" | "USER" | string;
-}
+const publicRoutes = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password", "/change-password"];
+const isPublicRoute = (pathname: string) => publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 
-const roleBasedRoutes: Record<string, string[]> = {
-  "/admin": ["ADMIN"],
-  "/user": ["USER", "ADMIN"],
-};
-
-const publicRoutes = [
-  "/login",
-  "/register",
-  "/verify-email",
-  "/forgot-password",
-  "/reset-password",
-];
-
-export async function proxy(request: NextRequest) {
-  const accessToken = request.cookies.get("token")?.value;
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  const user: IUser | null = null;
-
-  // if (!accessToken) {
-  //   if (publicRoutes.includes(pathname)) {
-  //     return NextResponse.next();
-  //   }
-  //   return NextResponse.redirect(
-  //     new URL(`/login?redirect=${pathname}`, request.url),
-  //   );
-  // }
-
-  // // 2. Token decode
-  // try {
-  //   user = decodeJwt(accessToken) as IUser;
-  // } catch {
-  //   return NextResponse.redirect(
-  //     new URL(`/login?redirect=${pathname}`, request.url),
-  //   );
-  // }
-
-  // if (user && publicRoutes.includes(pathname)) {
-  //   return NextResponse.redirect(new URL("/", request.url));
-  // }
-
-  // // 4. Role-based route check
-  // if (user) {
-  //   const matchedRouteKey = Object.keys(roleBasedRoutes).find((route) =>
-  //     pathname.startsWith(route),
-  //   );
-
-  //   if (matchedRouteKey) {
-  //     const allowedRoles = roleBasedRoutes[matchedRouteKey];
-
-  //     const userRole = user.role?.toUpperCase();
-  //     if (!allowedRoles.includes(userRole)) {
-  //       return NextResponse.redirect(new URL("/unauthorized", request.url));
-  //     }
-  //   }
-  // }
-
+  const token = request.cookies.get("token")?.value;
+  let role = "";
+  if (token) {
+    try {
+      const claims = decodeJwt(token);
+      if (typeof claims.exp === "number" && claims.exp * 1000 <= Date.now()) throw new Error("expired");
+      role = typeof claims.role === "string" ? claims.role.toUpperCase() : "";
+    } catch {
+      const response = NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}&session=expired`, request.url));
+      response.cookies.delete("token");
+      return response;
+    }
+  }
+  const protectedRoute = pathname.startsWith("/patient") || pathname.startsWith("/doctor") || pathname.startsWith("/admin") || pathname.startsWith("/user");
+  if (protectedRoute && !token) return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url));
+  if (role) {
+    if (pathname.startsWith("/admin") && role !== "ADMIN") return NextResponse.redirect(new URL("/", request.url));
+    if (pathname.startsWith("/patient") && role !== "PATIENT") return NextResponse.redirect(new URL("/", request.url));
+    const applicantRoute = pathname === "/doctor/application" || pathname === "/doctor/pending-approval";
+    if (pathname.startsWith("/doctor") && role !== "DOCTOR" && !(role === "USER" && applicantRoute)) return NextResponse.redirect(new URL("/", request.url));
+    if (isPublicRoute(pathname)) {
+      const destination = role === "ADMIN" ? "/admin/dashboard" : role === "DOCTOR" ? "/doctor" : role === "PATIENT" ? "/patient/dashboard" : "/user";
+      return NextResponse.redirect(new URL(destination, request.url));
+    }
+  }
   return NextResponse.next();
 }
 
-export const config = {
-  matcher: [
-    "/",
-    "/admin/:path*",
-    "/user/:path*",
-    "/patient/:path*",
-    "/login",
-    "/register",
-    "/verify-email",
-    "/forgot-password",
-    "/reset-password",
-  ],
-};
+export const config = { matcher: ["/admin/:path*", "/user/:path*", "/patient/:path*", "/doctor/:path*", "/login", "/register", "/verify-email", "/forgot-password/:path*", "/reset-password", "/change-password"] };

@@ -34,6 +34,151 @@
   gap: 28px;
 }
 
+.registerPage .container { width: min(100%, 1220px); }
+.registerPage .layout { grid-template-columns: minmax(0, 1.32fr) minmax(320px, 0.68fr); align-items: start; }
+
+.registerPage {
+  padding-top: 44px;
+  background: #f7f8fa;
+}
+
+.registerCard {
+  width: min(100%, 900px);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid #e2e5e9;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.045);
+}
+
+.registerTabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 30px;
+  border-bottom: 1px solid #e2e5e9;
+}
+
+.registerTabs::after {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 50%;
+  height: 2px;
+  background: #0f766e;
+  content: "";
+  transform: translateX(0);
+  transition: transform 180ms ease;
+}
+
+.registerTabs:has(.registerTab:nth-child(2)[aria-selected="true"])::after {
+  transform: translateX(100%);
+}
+
+.registerTab {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #768084;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.registerTab[aria-selected="true"] {
+  color: #173437;
+}
+
+.registerTab:disabled { cursor: not-allowed; opacity: 0.45; }
+.registerHeader { margin-bottom: 30px; text-align: center; }
+.registerHeader .heading { margin-bottom: 0; }
+.registerDescription { max-width: 540px; margin: 9px auto 0; color: #68777a; font-size: 14px; line-height: 1.55; }
+.registerHeader .notice { margin: 16px 0 0; text-align: left; }
+
+.formSection {
+  padding: 0 0 28px;
+}
+
+.formSection + .formSection {
+  padding-top: 27px;
+  border-top: 1px solid #e7efed;
+}
+
+.formSection h2,
+.sectionTitle h2 {
+  margin: 0 0 17px;
+  color: #173d40;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.formSection h2 span {
+  margin-left: 6px;
+  color: #829294;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle span {
+  margin-bottom: 17px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef6f4;
+  color: #63807c;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.consentSection {
+  display: grid;
+  gap: 11px;
+  padding: 24px 0;
+  border-top: 1px solid #e7efed;
+}
+
+.compactUpload {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1.5px dashed #afcbc5;
+  border-radius: 11px;
+  background: #f8fbfa;
+  color: #0f766e;
+  cursor: pointer;
+}
+
+.compactUpload:hover { border-color: #16877c; background: #f1faf7; }
+.compactUpload img { width: 48px; height: 48px; border-radius: 7px; object-fit: cover; }
+.compactUpload span { display: grid; gap: 3px; color: #315456; font-size: 12px; font-weight: 700; }
+.compactUpload small { color: #849294; font-size: 10px; font-weight: 500; }
+.compactFile { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 7px; color: #55736e; font-size: 10px; }
+.compactFile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compactFile button { display: grid; width: 26px; height: 26px; place-items: center; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #9d4141; cursor: pointer; }
+
+.registerTab:focus-visible,
+.compactUpload:focus-within,
+.compactFile button:focus-visible {
+  outline: 3px solid #6fc2b1;
+  outline-offset: 3px;
+}
+
 .formCard {
   padding: clamp(26px, 4vw, 42px);
   border: 1px solid #e4eeeb;
@@ -45,6 +190,65 @@
 .cardHeading {
   margin-bottom: 25px;
 }
+
+.stepLabel {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.roleChooser {
+  margin-bottom: 27px;
+}
+
+.roleTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.roleTab {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 68px;
+  padding: 11px 13px;
+  border: 1px solid #d8e5e2;
+  border-radius: 12px;
+  background: #fbfdfc;
+  color: #557073;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.roleTab span {
+  display: grid;
+  gap: 2px;
+}
+
+.roleTab strong { color: #173d40; font-size: 14px; }
+.roleTab small { color: #788b8d; font-size: 11px; }
+.roleTab[aria-selected="true"] { border-color: #16877c; background: #eff9f6; color: #0f766e; box-shadow: 0 0 0 2px rgba(22, 135, 124, 0.08); }
+.roleTab:disabled { cursor: not-allowed; opacity: 0.5; }
+
+.sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 0 0 17px;
+}
+
+.sectionHeading h2 { margin: 0; color: #173d40; font-size: 16px; line-height: 1.3; }
+.sectionHeading p { margin: 3px 0 0; color: #748689; font-size: 12px; line-height: 1.5; }
+.sectionNumber { display: grid; flex: 0 0 auto; width: 27px; height: 27px; place-items: center; border-radius: 8px; background: #0f766e; color: #fff; font-size: 12px; font-weight: 800; }
+.integrationBadge { margin-left: auto; padding: 5px 8px; border-radius: 999px; background: #eef5f4; color: #567173; font-size: 10px; font-weight: 750; white-space: nowrap; }
 
 .fields {
   display: grid;
@@ -69,7 +273,8 @@
 }
 
 .input,
-.select {
+.select,
+.textarea {
   width: 100%;
   min-height: 48px;
   padding: 0 13px;
@@ -82,17 +287,64 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
+.textarea { min-height: 88px; padding-top: 11px; resize: vertical; }
+
 .input::placeholder {
   color: #9aa9a8;
 }
 
 .input:focus,
 .select:focus,
+.textarea:focus,
 .otpInput:focus {
   border-color: #16877c;
   outline: 0;
   box-shadow: 0 0 0 3px rgba(22, 135, 124, 0.14);
 }
+
+.patientPanel,
+.approvalNotice,
+.applicationLink {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid #d6ebe5;
+  border-radius: 12px;
+  background: #f4fbf8;
+  color: #0f766e;
+}
+
+.patientPanel strong,
+.approvalNotice strong,
+.applicationLink strong { display: block; color: #204c4b; font-size: 13px; }
+.patientPanel p,
+.approvalNotice p,
+.applicationLink p { margin: 3px 0 0; color: #61787a; font-size: 12px; line-height: 1.55; }
+.professionalSection { margin-top: 28px; padding-top: 26px; border-top: 1px solid #e6efed; }
+.approvalNotice { margin: 0 0 20px; border-color: #f0dfac; background: #fffbeb; color: #9a6700; }
+.approvalNotice strong { color: #74520b; }
+.approvalNotice p { color: #7e6a3a; }
+.previewFieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.optional { color: #819294; font-weight: 500; }
+.uploadBlock { display: grid; gap: 10px; margin-top: 19px; }
+.uploadDropzone { display: flex; min-height: 116px; align-items: center; justify-content: center; gap: 13px; overflow: hidden; padding: 18px; border: 1.5px dashed #a9c9c3; border-radius: 13px; background: #f8fbfa; color: #16877c; text-align: left; cursor: pointer; }
+.uploadDropzone:hover { border-color: #16877c; background: #f1faf7; }
+.uploadDropzone span { display: grid; gap: 3px; }
+.uploadDropzone strong { color: #25494b; font-size: 13px; }
+.uploadDropzone small { color: #7b8d8f; font-size: 11px; }
+.documentPreview { width: 62px; height: 76px; border: 1px solid #d7e6e2; border-radius: 8px; object-fit: cover; }
+.fileMeta { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #cce8dc; border-radius: 10px; background: #f1faf6; color: #18765a; }
+.fileMeta span { display: grid; min-width: 0; gap: 2px; }
+.fileMeta strong { overflow: hidden; color: #235d4d; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.fileMeta small { color: #6b847d; font-size: 10px; }
+.fileMeta button { padding: 5px; border: 0; background: transparent; color: #9b3434; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.applicationLink { margin-top: 18px; }
+.applicationLink a { color: #0f766e; font-weight: 750; }
+.unsavedNote { display: flex; align-items: center; gap: 7px; margin: 11px 0 0; color: #7a898b; font-size: 11px; line-height: 1.5; }
+.unsavedNote svg { flex: 0 0 auto; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .input[aria-invalid="true"],
 .select[aria-invalid="true"] {
@@ -246,6 +498,8 @@
     linear-gradient(145deg, #0e625d, #0b4749);
   color: #fff;
 }
+
+.registerPage .visualPanel { position: sticky; top: 24px; min-height: 560px; }
 
 .visualPanel::after {
   position: absolute;
@@ -457,6 +711,14 @@
   outline-offset: 3px;
 }
 
+.roleTab:focus-visible,
+.uploadDropzone:focus-within,
+.fileMeta button:focus-visible,
+.textarea:focus-visible {
+  outline: 3px solid #6fc2b1;
+  outline-offset: 3px;
+}
+
 @media (max-width: 760px) {
   .page {
     padding: 34px 18px 52px;
@@ -467,10 +729,16 @@
     grid-template-columns: 1fr;
   }
 
+  .registerPage .layout { grid-template-columns: 1fr; }
+
   .visualPanel {
     min-height: 0;
     padding: 28px;
+    position: relative;
+    top: auto;
   }
+
+  .registerPage .visualPanel { position: relative; top: auto; min-height: 0; }
 
   .panelTitle {
     max-width: 560px;
@@ -500,6 +768,10 @@
     gap: 15px;
   }
 
+  .roleTabs { grid-template-columns: 1fr; }
+  .sectionHeading { flex-wrap: wrap; }
+  .integrationBadge { margin-left: 38px; }
+
   .fieldFull {
     grid-column: auto;
   }
@@ -508,6 +780,13 @@
     padding: 25px 22px;
     border-radius: 17px;
   }
+
+  .registerPage { padding-top: 22px; }
+  .registerCard { padding: 20px 17px 24px; border-radius: 8px; }
+  .registerTabs { margin-bottom: 24px; }
+  .registerTab { min-height: 46px; }
+  .sectionTitle { align-items: flex-start; }
+  .sectionTitle span { white-space: normal; text-align: right; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -518,3 +797,4 @@
     transition: none;
   }
 }
+

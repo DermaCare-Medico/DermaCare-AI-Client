@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
-import { ArrowRight, Sparkles, ShieldCheck, HeartPulse } from "lucide-react";
+import { Sparkles, ShieldCheck, HeartPulse } from "lucide-react";
+import { Button, ButtonArrow } from "@/components/ui/button";
 
 export default function FinalCTASection() {
   return (
@@ -35,20 +36,13 @@ export default function FinalCTASection() {
 
           {/* CTA */}
           <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <Link
-              href="/register"
-              className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-base font-semibold text-primary shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-primary sm:w-auto"
-            >
-              Get Started Today
-              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-            </Link>
+            <Button asChild variant="cta" size="lg" className="w-full border-white/35 focus-visible:ring-white/40 sm:w-auto">
+              <Link href="/register">Get Started Today <ButtonArrow /></Link>
+            </Button>
 
-            <Link
-              href="/"
-              className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/25 bg-white/5 px-7 py-3.5 text-base font-medium text-white transition-all duration-300 hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
-            >
-              Explore DermaCare AI
-            </Link>
+            <Button asChild variant="ctaOutline" size="lg" className="w-full border-white/35 focus-visible:ring-white/40 sm:w-auto">
+              <Link href="/">Explore DermaCare AI <ButtonArrow /></Link>
+            </Button>
           </div>
 
           {/* Trust Indicators */}

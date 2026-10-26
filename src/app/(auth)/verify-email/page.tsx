@@ -14,6 +14,9 @@ import { ArrowLeft, CheckCircle2, Clock3, MailCheck, ShieldCheck } from "lucide-
 import Link from "next/link";
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import styles from "../auth.module.css";
+import { useAppDispatch } from "@/redux/hooks";
+import { setSession } from "@/redux/features/authSlice";
+import { dashboardForRole, sessionFromResponse } from "@/src/utils/auth";
 
 const OTP_LENGTH = 6;
 const RESEND_DELAY_SECONDS = 60;
@@ -38,6 +41,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 export default function VerifyEmailPage() {
   const demoMode = isDemoAuthEnabled();
   const [email, setEmail] = useState("");
+  const [registrationRole, setRegistrationRole] = useState<"PATIENT" | "DOCTOR">("PATIENT");
   const [digits, setDigits] = useState(Array<string>(OTP_LENGTH).fill(""));
   const [secondsLeft, setSecondsLeft] = useState(RESEND_DELAY_SECONDS);
   const [requestError, setRequestError] = useState("");
@@ -48,10 +52,12 @@ export default function VerifyEmailPage() {
   const submissionInFlight = useRef(false);
   const [verifyEmail, { isLoading: isVerifying }] = useVerifyOtpMutation();
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedEmail = params.get("email")?.trim().toLowerCase() ?? "";
+    setRegistrationRole(params.get("role") === "DOCTOR" ? "DOCTOR" : "PATIENT");
     const demoRegistration = readDemoRegistration();
     const resolvedEmail = requestedEmail || demoRegistration?.email || DEMO_ACCOUNT.email;
 
@@ -161,9 +167,14 @@ export default function VerifyEmailPage() {
     setResendMessage("");
     setInputError("");
     try {
-      await verifyEmail({ email, otp: code }).unwrap();
+      const response = await verifyEmail({ email, otp: code }).unwrap();
+      const session = sessionFromResponse(response);
+      if (session) dispatch(setSession(session));
       setSuccessMessage("Your email has been verified. You can now sign in.");
       setDigits(Array<string>(OTP_LENGTH).fill(""));
+      window.setTimeout(() => {
+        window.location.assign(session ? dashboardForRole(session.user?.role, registrationRole === "DOCTOR") : "/login");
+      }, 500);
     } catch (error: unknown) {
       setRequestError(apiErrorMessage(error, "We couldn’t verify that code. Please try again."));
       setDigits(Array<string>(OTP_LENGTH).fill(""));
@@ -285,7 +296,7 @@ export default function VerifyEmailPage() {
 
                 <div className={styles.resendRow}>
                   <span>Didn’t receive the code?</span>
-                  <button className={styles.resendButton} disabled={!email || isResending} onClick={handleResend} type="button">
+                  <button className={styles.resendButton} disabled={!email || isResending || secondsLeft > 0} onClick={handleResend} type="button">
                     {isResending ? "Sending…" : demoMode ? "Use demo code instead" : secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend code"}
                   </button>
                 </div>

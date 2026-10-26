@@ -36,15 +36,7 @@ export const publicApi = baseApi.injectEndpoints({
     getDoctors: builder.query<ApiEnvelope<unknown>, DoctorSearchArgs | void>({
       query: (args) => ({
         url: "/doctors",
-        params: args
-          ? {
-              search: args.search,
-              specialty: args.specialty,
-              screeningId: args.screeningId,
-              page: args.page,
-              limit: args.limit,
-            }
-          : undefined,
+        params: args ? { page: args.page, limit: args.limit } : undefined,
       }),
       providesTags: [{ type: "Doctors" as const, id: "LIST" }],
     }),
@@ -69,13 +61,13 @@ export const publicApi = baseApi.injectEndpoints({
       ],
     }),
 
-    /** GET /store/medicines — public medicine catalog search. */
+    /** GET /medicines — public medicine catalog search. */
     getStoreMedicines: builder.query<
       ApiEnvelope<unknown>,
       MedicineSearchArgs | void
     >({
       query: (args) => ({
-        url: "/store/medicines",
+        url: "/medicines",
         params: args
           ? {
               search: args.search,
@@ -89,9 +81,9 @@ export const publicApi = baseApi.injectEndpoints({
       providesTags: [{ type: "StoreMedicines" as const, id: "LIST" }],
     }),
 
-    /** GET /store/medicines/{id} — single catalog item. */
+    /** GET /medicines/{id} — single catalog item. */
     getStoreMedicineById: builder.query<ApiEnvelope<Medicine>, string>({
-      query: (id) => `/store/medicines/${id}`,
+      query: (id) => `/medicines/${id}`,
       providesTags: (_result, _error, id) => [
         { type: "StoreMedicines" as const, id },
       ],

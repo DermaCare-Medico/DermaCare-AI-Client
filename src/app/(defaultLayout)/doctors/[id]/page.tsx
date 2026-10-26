@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -17,6 +17,9 @@ import { DemoNotice } from "@/components/shared/DemoNotice";
 import { formatMoney } from "@/lib/api/format";
 import { formatCurrency, formatDateTime, qualificationList } from "@/lib/doctor/utils";
 import { usePublicDoctor, usePublicDoctorSlots } from "@/src/hooks/usePublicCatalog";
+import { useAppSelector } from "@/redux/hooks";
+import { useBookAppointmentMutation } from "@/redux/api/appointmentApi";
+import { useState } from "react";
 
 export default function PublicDoctorProfilePage() {
   const params = useParams<{ id: string }>();
@@ -24,6 +27,24 @@ export default function PublicDoctorProfilePage() {
 
   const { doctor, isDemo, isLoading, isError, error, refetch } = usePublicDoctor(id);
   const slotsState = usePublicDoctorSlots(id);
+  const searchParams = useSearchParams();
+  const role = useAppSelector((state) => state.auth.user?.role);
+  const token = useAppSelector((state) => state.auth.token);
+  const [bookAppointment, bookingState] = useBookAppointmentMutation();
+  const [bookingNotice, setBookingNotice] = useState("");
+  const book = async (slotId: string) => {
+    if (!id) return;
+    setBookingNotice("");
+    try {
+      const response = await bookAppointment({ doctorId: id, slotId, screeningId: searchParams.get("screeningId") || undefined, historySharingConsent: true }).unwrap();
+      const appointmentId = response.data.appointmentId ?? response.data.id;
+      setBookingNotice("Appointment request created successfully.");
+      if (appointmentId) window.location.assign(`/patient/appointments/${encodeURIComponent(appointmentId)}`);
+    } catch (error) {
+      if (typeof error === "object" && error && "data" in error && typeof error.data === "object" && error.data && "message" in error.data && typeof error.data.message === "string") setBookingNotice(error.data.message);
+      else setBookingNotice("The appointment could not be booked.");
+    }
+  };
 
   const qualifications = qualificationList(doctor?.qualifications);
   const availableSlots = slotsState.slots
@@ -120,10 +141,10 @@ export default function PublicDoctorProfilePage() {
                       {formatMoney(doctor.consultationFee, doctor.currency ?? "USD")}
                     </span>
                     <Link
-                      href="/login"
+                      href={token && role === "PATIENT" ? "#available-slots" : "/login"}
                       className="rounded-xl bg-[#0F888D] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0c6b6f]"
                     >
-                      Book consultation
+                      {token && role === "PATIENT" ? "Choose a slot" : "Sign in to book"}
                     </Link>
                     <p className="max-w-[12rem] text-[11px] leading-4 text-[#94A3B8]">
                       Booking happens after you sign in as a patient.
@@ -135,7 +156,7 @@ export default function PublicDoctorProfilePage() {
               <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
                 {/* Bio + qualifications */}
                 <div className="space-y-6">
-                  <div className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+                  <div id="available-slots" className="rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
                     <h2 className="flex items-center gap-2 text-base font-bold text-[#0F2942]">
                       <BadgeCheck size={18} className="text-[#0F888D]" />
                       About
@@ -201,10 +222,12 @@ export default function PublicDoctorProfilePage() {
                                   {formatCurrency(slot.fee)}
                                 </span>
                               )}
+                              {token && role === "PATIENT" ? <button type="button" disabled={bookingState.isLoading} onClick={() => void book(slot.id)} className="rounded-lg bg-[#0F888D] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Book</button> : null}
                             </li>
                           ))}
                         </ul>
                       </DataState>
+                      {bookingNotice ? <p className="mt-3 text-xs text-[#64748B]" role="status">{bookingNotice}</p> : null}
                     </div>
                   </div>
 

@@ -1,58 +1,31 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
-import {
-  clearDemoSession,
-  isDemoAuthEnabled,
-  persistDemoSession,
-} from "@/src/utils/demoAuth";
 
-interface AuthState {
-  token: string | null;
-  user: any;
-  refresh_token: string | null;
-}
-
-const initialState: AuthState = {
-  token: null,
-  user: null,
-  refresh_token: null,
-};
+export type AuthUser = { id?: string; name?: string; email?: string; role?: string; [key: string]: unknown };
+interface AuthState { token: string | null; user: AuthUser | null; refreshToken: string | null }
+const initialState: AuthState = { token: null, user: null, refreshToken: null };
+const cookieOptions = () => ({ sameSite: "lax" as const, secure: typeof window !== "undefined" && window.location.protocol === "https:" });
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<{ token: string; user: any }>) => {
-      state.token = action.payload.token;
+    setSession: (state, action: PayloadAction<{ accessToken: string; refreshToken: string; user: AuthUser | null }>) => {
+      state.token = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
       state.user = action.payload.user;
-
-      if (isDemoAuthEnabled()) {
-        persistDemoSession(action.payload.token, action.payload.user);
-      } else {
-        Cookies.set("accessToken", action.payload.token);
-      }
-    },
-    setRefreshToken: (
-      state,
-      action: PayloadAction<{ refresh_token: string }>
-    ) => {
-      state.refresh_token = action.payload.refresh_token;
-      Cookies.set("refreshToken", action.payload.refresh_token);
+      Cookies.set("token", action.payload.accessToken, cookieOptions());
     },
     logout: (state) => {
       state.token = null;
       state.user = null;
-      state.refresh_token = null;
+      state.refreshToken = null;
+      Cookies.remove("token");
       Cookies.remove("accessToken");
-
-      if (isDemoAuthEnabled()) {
-        clearDemoSession();
-      }
+      Cookies.remove("refreshToken");
     },
   },
 });
 
-export const { setUser, setRefreshToken, logout } = authSlice.actions;
-
+export const { setSession, logout } = authSlice.actions;
 export default authSlice.reducer;

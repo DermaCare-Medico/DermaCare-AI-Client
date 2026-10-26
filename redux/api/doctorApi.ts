@@ -68,6 +68,16 @@ export interface CreatePrescriptionArgs {
   items: PrescriptionItem[];
 }
 
+export interface DoctorApplicationRequest {
+  licenseNumber: string;
+  qualifications: string[];
+  experienceYears: number;
+  consultationFee: number;
+  bio: string;
+  specializationIds: string[];
+  documentReferences: string[];
+}
+
 export interface UpdateConsultationArgs {
   id: string;
   status: ConsultationTransition;
@@ -84,6 +94,24 @@ export interface ConsultationNoteArgs {
 
 export const doctorApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    uploadDoctorApplicationDocument: builder.mutation<
+      ApiEnvelope<{ documentReference: string }>,
+      File
+    >({
+      query: (file) => {
+        const body = new FormData();
+        body.append("image", file);
+        return { url: "/doctors/application/documents", method: "POST", body };
+      },
+    }),
+
+    submitDoctorApplication: builder.mutation<
+      ApiEnvelope<unknown>,
+      DoctorApplicationRequest
+    >({
+      query: (body) => ({ url: "/doctors/application", method: "POST", body }),
+      invalidatesTags: ["DoctorProfile", "Identity"],
+    }),
     /** GET /appointments — role-scoped list (doctors see their schedule). */
     getAppointments: builder.query<
       ApiEnvelope<unknown>,
@@ -350,6 +378,134 @@ export const doctorApi = baseApi.injectEndpoints({
       ],
     }),
 
+    /** GET /doctors/me/profile � doctor own profile. */
+    getOwnDoctorProfile: builder.query<ApiEnvelope<DoctorProfile>, void>({
+      query: () => "/doctors/me/profile",
+      providesTags: ["DoctorProfile"],
+    }),
+
+    /** PATCH /doctors/me/profile � update doctor own profile. */
+    updateOwnDoctorProfile: builder.mutation<
+      ApiEnvelope<DoctorProfile>,
+      { bio?: string; consultationFee?: number; experienceYears?: number }
+    >({
+      query: (body) => ({
+        url: "/doctors/me/profile",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["DoctorProfile", "Identity"],
+    }),
+
+    /** GET /doctors/me/slots � list doctor's own slots. */
+    getOwnDoctorSlots: builder.query<ApiEnvelope<unknown>, void>({
+      query: () => "/doctors/me/slots",
+      providesTags: [{ type: "DoctorSlots" as const, id: "LIST" }],
+    }),
+
+    /** GET /doctors/me/appointment-requests � pending appointment requests. */
+    getDoctorAppointmentRequests: builder.query<ApiEnvelope<unknown>, void>({
+      query: () => "/doctors/me/appointment-requests",
+      providesTags: [{ type: "Appointments" as const, id: "REQUESTS" }],
+    }),
+
+    /** GET /doctors/me/appointments � list doctor appointment history. */
+    getDoctorAppointments: builder.query<
+      ApiEnvelope<unknown>,
+      { page?: number; limit?: number; status?: string } | void
+    >({
+      query: (params) => ({
+        url: "/doctors/me/appointments",
+        params: params || undefined,
+      }),
+      providesTags: [{ type: "Appointments" as const, id: "LIST" }],
+    }),
+
+    /** PATCH /doctors/me/appointments/{appointmentId}/decision � accept or reject appointment. */
+    decideAppointmentRequest: builder.mutation<
+      ApiEnvelope<unknown>,
+      { appointmentId: string; action: "ACCEPT" | "REJECT"; reason?: string }
+    >({
+      query: ({ appointmentId, ...body }) => ({
+        url: `/doctors/me/appointments/${appointmentId}/decision`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: [
+        { type: "Appointments" as const, id: "LIST" },
+        { type: "Appointments" as const, id: "REQUESTS" },
+      ],
+    }),
+
+    /** PATCH /doctors/me/appointments/{appointmentId}/complete � complete consultation. */
+    completeDoctorConsultation: builder.mutation<
+      ApiEnvelope<unknown>,
+      string
+    >({
+      query: (appointmentId) => ({
+        url: `/doctors/me/appointments/${appointmentId}/complete`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (_result, _error, appointmentId) => [
+        { type: "Appointments" as const, id: appointmentId },
+        { type: "Appointments" as const, id: "LIST" },
+      ],
+    }),
+
+    /** GET /doctors/me/prescriptions � list doctor's prescriptions. */
+    getDoctorPrescriptions: builder.query<
+      ApiEnvelope<unknown>,
+      { page?: number; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: "/doctors/me/prescriptions",
+        params: params || undefined,
+      }),
+      providesTags: [{ type: "Prescriptions" as const, id: "LIST" }],
+    }),
+
+    /** POST /prescriptions/{id}/send � send finalized prescription to patient. */
+    sendPrescriptionToPatient: builder.mutation<ApiEnvelope<unknown>, string>({
+      query: (id) => ({
+        url: `/prescriptions/${id}/send`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Prescriptions" as const, id },
+        { type: "Prescriptions" as const, id: "LIST" },
+      ],
+    }),
+
+    /** GET /doctors/me/earnings/summary � earnings summary. */
+    getDoctorEarningsSummary: builder.query<ApiEnvelope<unknown>, void>({
+      query: () => "/doctors/me/earnings/summary",
+      providesTags: ["Earnings"],
+    }),
+
+    /** GET /doctors/me/earnings/history � earnings history. */
+    getDoctorEarningsHistory: builder.query<
+      ApiEnvelope<unknown>,
+      { page?: number; limit?: number; year?: number; month?: number } | void
+    >({
+      query: (params) => ({
+        url: "/doctors/me/earnings/history",
+        params: params || undefined,
+      }),
+      providesTags: ["Earnings"],
+    }),
+
+    /** GET /doctors/me/payouts � payout history. */
+    getDoctorPayoutHistory: builder.query<
+      ApiEnvelope<unknown>,
+      { page?: number; limit?: number; status?: string } | void
+    >({
+      query: (params) => ({
+        url: "/doctors/me/payouts",
+        params: params || undefined,
+      }),
+      providesTags: ["Payouts"],
+    }),
+
     /** POST /appointments/{id}/cancel — doctor direct cancellation. */
     cancelAppointment: builder.mutation<
       ApiEnvelope<AppointmentDetail>,
@@ -369,6 +525,8 @@ export const doctorApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useUploadDoctorApplicationDocumentMutation,
+  useSubmitDoctorApplicationMutation,
   useGetAppointmentsQuery,
   useGetAppointmentByIdQuery,
   useGetPreConsultationQuery,
@@ -393,4 +551,16 @@ export const {
   useSendConversationMessageMutation,
   useReviewCancellationMutation,
   useCancelAppointmentMutation,
+  useGetOwnDoctorProfileQuery,
+  useUpdateOwnDoctorProfileMutation,
+  useGetOwnDoctorSlotsQuery,
+  useGetDoctorAppointmentRequestsQuery,
+  useGetDoctorAppointmentsQuery,
+  useDecideAppointmentRequestMutation,
+  useCompleteDoctorConsultationMutation,
+  useGetDoctorPrescriptionsQuery,
+  useSendPrescriptionToPatientMutation,
+  useGetDoctorEarningsSummaryQuery,
+  useGetDoctorEarningsHistoryQuery,
+  useGetDoctorPayoutHistoryQuery,
 } = doctorApi;

@@ -4,7 +4,7 @@
 }
 
 .content {
-  width: min(100% - 48px, 1200px);
+  width: min(100% - 64px, 1280px);
   margin: 0 auto;
   padding: 48px 0 24px;
 }
@@ -110,7 +110,7 @@
 
 @media (max-width: 760px) {
   .content {
-    width: min(100% - 36px, 600px);
+    width: min(100% - 48px, 1280px);
     padding-top: 46px;
   }
 

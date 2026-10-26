@@ -58,7 +58,7 @@ export const doctorService = {
 
   uploadApplicationDocument: (token: string, file: File) => {
     const formData = new FormData();
-    formData.append("document", file);
+    formData.append("image", file);
 
     return apiRequest("/doctors/application/documents", {
       method: "POST",

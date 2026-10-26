@@ -49,6 +49,7 @@ import { PrescriptionDialog } from "@/components/doctor/PrescriptionDialog";
 import {
   useCancelAppointmentMutation,
   useFinalizePrescriptionMutation,
+  useSendPrescriptionToPatientMutation,
   useGetAppointmentVideoQuery,
   useReviewCancellationMutation,
   useUpdateConsultationMutation,
@@ -162,6 +163,16 @@ export default function DoctorAppointmentDetailPage() {
   const [reviewCancellation, reviewState] = useReviewCancellationMutation();
   const [cancelAppointment, cancelState] = useCancelAppointmentMutation();
   const [finalizePrescription, finalizeState] = useFinalizePrescriptionMutation();
+  const [sendPrescription, sendState] = useSendPrescriptionToPatientMutation();
+
+  async function handleSend(prescriptionId: string) {
+    try {
+      await sendPrescription(prescriptionId).unwrap();
+      toast.success("Prescription sent to patient successfully.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not send the prescription."));
+    }
+  }
 
   const [completionSummary, setCompletionSummary] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
@@ -523,7 +534,18 @@ export default function DoctorAppointmentDetailPage() {
                               >
                                 Finalize
                               </Button>
-                            )}
+                              )}
+                              {rx.status === "FINALIZED" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-[#0F888D] hover:bg-[#E8F5F4]"
+                                  disabled={sendState.isLoading}
+                                  onClick={() => handleSend(rx.id)}
+                                >
+                                  Send to patient
+                                </Button>
+                              )}
                           </div>
                         </div>
                         {rx.items && rx.items.length > 0 && (
