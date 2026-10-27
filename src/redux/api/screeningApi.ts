@@ -302,4 +302,3 @@ export const {
   useRetryScreeningPredictionMutation,
   useGetScreeningDoctorsQuery,
 } = screeningApi;
-} = screeningApi;
