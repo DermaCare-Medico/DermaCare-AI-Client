@@ -56,9 +56,14 @@ export function safeReturnPath(value?: string | null): string | null {
 export function destinationAfterLogin(role?: string | null, returnPath?: string | null) {
   const safePath = safeReturnPath(returnPath);
   const normalizedRole = role?.toUpperCase();
+  const isScreeningPath =
+    safePath === "/patient/screening/new" ||
+    safePath === "/patient/screening/result" ||
+    Boolean(safePath && /^\/patient\/screening\/[^/?#]+$/.test(safePath));
 
   if (
-    safePath === "/patient/screening/new" &&
+    safePath &&
+    isScreeningPath &&
     (normalizedRole === "PATIENT" || normalizedRole === "USER")
   ) {
     return safePath;

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useAppSelector } from "@/redux/hooks";
 import { useDecodedToken } from "@/src/hooks/useDecodedToken";
 import { dashboardForRole } from "@/src/utils/auth";
 import { isDemoAuthEnabled, readDemoSession } from "@/src/utils/demoAuth";
+import { ScreeningFlowProvider } from "./screening-flow-context";
 
 const SCREENING_PATH = "/patient/screening/new";
 
@@ -16,6 +17,7 @@ export default function ScreeningAccessLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const token = useAppSelector((state) => state.auth.token);
   const userRole = useAppSelector((state) => state.auth.user?.role);
   const decodedToken = useDecodedToken(token);
@@ -26,16 +28,16 @@ export default function ScreeningAccessLayout({
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace(`/login?redirect=${encodeURIComponent(SCREENING_PATH)}`);
+      router.replace(`/login?redirect=${encodeURIComponent(pathname || SCREENING_PATH)}`);
       return;
     }
 
     if (!canScreen) {
       router.replace(dashboardForRole(role));
     }
-  }, [canScreen, isAuthenticated, role, router]);
+  }, [canScreen, isAuthenticated, pathname, role, router]);
 
   if (!isAuthenticated || !canScreen) return null;
 
-  return <>{children}</>;
+  return <ScreeningFlowProvider>{children}</ScreeningFlowProvider>;
 }
