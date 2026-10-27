@@ -28,7 +28,7 @@ export default function HeroSection() {
           <h1>Better skin insights.<br />Better care. Better you.</h1>
           <p className={styles.description}>AI-assisted skin screening and trusted doctor consultations, brought together to help you understand your skin and choose the right next step.</p>
           <div className={styles.ctas}>
-            <Button asChild variant="cta" size="lg" className={styles.heroCta}><Link href="/register">Start Skin Screening <ButtonArrow /></Link></Button>
+            <Button asChild variant="cta" size="lg" className={styles.heroCta}><Link href="/patient/screening/new">Start Skin Screening <ButtonArrow /></Link></Button>
             <Button asChild variant="ctaOutline" size="lg" className={styles.heroCta}><Link href="/doctors">Find a Doctor <ButtonArrow /></Link></Button>
           </div>
         </div>

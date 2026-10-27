@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Stethoscope } from "lucide-react";
+import { CalendarClock, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/redux/hooks";
 import { getPredictionFields, useGetScreeningHistoryQuery, type ScreeningRecord } from "@/redux/api/screeningApi";
@@ -22,7 +22,6 @@ export default function PatientDashboardPage() {
   const failed = screeningsQuery.isError || appointmentsQuery.isError;
   return <div className={styles.page}>
     <div className={styles.topBar}><div><p className={styles.eyebrow}>Patient dashboard</p><h1>Welcome, {user?.name ?? "Patient"}</h1></div><div className={styles.topActions}><Button asChild size="lg" className={styles.primaryButton}><Link href="/patient/screening/new">Start New Screening</Link></Button></div></div>
-    <section className={styles.welcomeCard}><div><p className={styles.welcomeLabel}>Your skin health snapshot</p><h2>Keep an eye on changes and book care when it matters most.</h2></div><div className={styles.welcomeActions}><Button asChild className={styles.primaryButton}><Link href="/patient/screening/new">Start New Screening <ArrowRight size={16} /></Link></Button><Button asChild variant="outline"><Link href="/doctors">Find a Doctor</Link></Button></div></section>
     {loading ? <PageState state="loading" /> : failed ? <PageState state="error" onRetry={() => { void screeningsQuery.refetch(); void appointmentsQuery.refetch(); }} /> : <>
       <section className={styles.summaryGrid}><article className={styles.summaryCard}><p>Recent screenings</p><strong>{screenings.length}</strong><span>Latest records</span></article><article className={styles.summaryCard}><p>Appointments</p><strong>{appointments.length}</strong><span>Current page</span></article><article className={styles.summaryCard}><p>Upcoming</p><strong>{upcoming ? "1" : "0"}</strong><span>{upcoming?.status ? String(upcoming.status) : "None scheduled"}</span></article></section>
       <section className={styles.mainGrid}><article className={styles.panel}><div className={styles.panelHeader}><div><p className={styles.sectionEyebrow}>Recent screenings</p><h3>Screening history</h3></div><Link href="/patient/screening/history" className={styles.inlineLink}>View all</Link></div><div className={styles.recordList}>{screenings.length === 0 ? <p>No screening records yet.</p> : screenings.map((item) => { const id = item.screeningId ?? item.id ?? ""; const prediction = getPredictionFields(item); return <div key={id} className={styles.recordCard}><div className={styles.thumbnail}>AI</div><div className={styles.recordDetails}><div className={styles.recordMetaRow}><span>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Date unavailable"}</span><span className={styles.statusBadge}>{item.status ?? "Processing"}</span></div><h4>{prediction.condition}</h4><p>{item.symptoms ?? "No symptom summary returned."}</p><Link href={`/patient/screening/${encodeURIComponent(id)}`} className={styles.textButton}>View Details</Link></div></div>; })}</div></article>

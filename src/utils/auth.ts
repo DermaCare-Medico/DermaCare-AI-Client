@@ -40,3 +40,29 @@ export function profileForRole(role?: string | null) {
       return "/patient/profile";
   }
 }
+
+export function safeReturnPath(value?: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+
+  try {
+    const parsed = new URL(value, "https://dermacare.local");
+    if (parsed.origin !== "https://dermacare.local") return null;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+export function destinationAfterLogin(role?: string | null, returnPath?: string | null) {
+  const safePath = safeReturnPath(returnPath);
+  const normalizedRole = role?.toUpperCase();
+
+  if (
+    safePath === "/patient/screening/new" &&
+    (normalizedRole === "PATIENT" || normalizedRole === "USER")
+  ) {
+    return safePath;
+  }
+
+  return dashboardForRole(role);
+}

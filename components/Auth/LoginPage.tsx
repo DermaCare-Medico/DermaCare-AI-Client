@@ -13,7 +13,7 @@ import { useRef, useState } from "react";
 import type { FieldValues } from "react-hook-form";
 import { useAppDispatch } from "@/redux/hooks";
 import { setSession } from "@/redux/features/authSlice";
-import { dashboardForRole, sessionFromResponse } from "@/src/utils/auth";
+import { destinationAfterLogin, sessionFromResponse } from "@/src/utils/auth";
 
 function getApiErrorMessage(error: unknown): string {
   if (typeof error === "object" && error !== null && "data" in error) {
@@ -60,7 +60,8 @@ export default function LoginPage() {
       const session = sessionFromResponse(response);
       if (!session) throw new Error("The server did not return a complete session.");
       dispatch(setSession(session));
-      window.location.assign(dashboardForRole(session.user?.role));
+      const returnPath = new URLSearchParams(window.location.search).get("redirect");
+      window.location.assign(destinationAfterLogin(session.user?.role, returnPath));
     } catch (error: unknown) {
       setNotice(error instanceof Error ? error.message : getApiErrorMessage(error));
       submitting.current = false;
