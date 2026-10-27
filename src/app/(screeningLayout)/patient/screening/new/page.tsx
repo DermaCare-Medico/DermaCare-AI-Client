@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, ImagePlus, LoaderCircle, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ImagePlus, LoaderCircle, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatConfidence, getPredictionFields, useCreateScreeningMutation, useUploadScreeningImageMutation, type ScreeningRecord } from "@/redux/api/screeningApi";
@@ -119,14 +119,14 @@ export default function NewSkinScreeningPage() {
     }
 
     if (!file.type.includes("jpeg") && !file.type.includes("png")) {
-      setSelectedFile(null);
       setImageError("Please choose a JPG or PNG image under 10 MB.");
+      event.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setSelectedFile(null);
       setImageError("The image must be 10 MB or smaller.");
+      event.target.value = "";
       return;
     }
 
@@ -230,19 +230,19 @@ export default function NewSkinScreeningPage() {
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
-        <Link href="/patient/dashboard" className={styles.backLink}>
-          <ArrowLeft size={16} />
-          Back to dashboard
-        </Link>
+        {/* <Link href="/patient/dashboard" className={styles.backLink}>
+          <ArrowLeft size={16} /> */}
+          {/* Back to dashboard */}
+        {/* </Link> */}
         <div>
-          <p className={styles.eyebrow}>Skin screening</p>
+          {/* <p className={styles.eyebrow}>Skin screening</p> */}
           <h1>New Skin Screening</h1>
         </div>
       </header>
 
-      <p className={styles.pageDescription}>
+      {/* <p className={styles.pageDescription}>
         This tool provides preliminary screening support only and cannot diagnose skin conditions.
-      </p>
+      </p> */}
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <section className={styles.panel}>
@@ -254,6 +254,43 @@ export default function NewSkinScreeningPage() {
           </div>
 
           <div className={styles.uploadBox}>
+            {previewUrl && selectedFile ? (
+              <div className={styles.previewWrap}>
+                <img
+                  src={previewUrl}
+                  alt={`Selected skin image: ${selectedFile.name}`}
+                  className={styles.previewImage}
+                />
+                <input
+                  id="skin-image-input"
+                  ref={fileInputRef}
+                  className={styles.previewInput}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                  onChange={handleFileSelection}
+                  aria-label="Replace selected skin image"
+                />
+                <div className={styles.previewFooter}>
+                  <span className={styles.fileName} title={selectedFile.name}>
+                    {selectedFile.name}
+                  </span>
+                  <div className={styles.previewActions}>
+                    <button
+                      type="button"
+                      className={styles.replaceButton}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <RefreshCw size={14} aria-hidden="true" />
+                      Replace Image
+                    </button>
+                    <button type="button" className={styles.removeButton} onClick={cleanupPreview}>
+                      <Trash2 size={14} aria-hidden="true" />
+                      Remove Image
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <label className={styles.uploadZone} htmlFor="skin-image-input">
               <input
                 id="skin-image-input"
@@ -270,20 +307,7 @@ export default function NewSkinScreeningPage() {
               <span className={styles.uploadHint}>JPG or PNG only · Max 10 MB</span>
               <span className={styles.browseButton}>Browse Files</span>
             </label>
-
-            {previewUrl ? (
-              <div className={styles.previewWrap}>
-                <img src={previewUrl} alt="Selected skin preview" className={styles.previewImage} />
-                <div className={styles.previewActions}>
-                  <button type="button" className={styles.linkButton} onClick={cleanupPreview}>
-                    Remove Image
-                  </button>
-                  <label className={styles.linkButton} htmlFor="skin-image-input">
-                    Replace Image
-                  </label>
-                </div>
-              </div>
-            ) : null}
+            )}
           </div>
 
           <p className={styles.infoText}>
