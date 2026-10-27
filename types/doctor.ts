@@ -154,22 +154,32 @@ export type VerificationStatus =
   | "APPROVED"
   | "REJECTED";
 
+export interface SpecializationItem {
+  id?: string;
+  name?: string;
+  description?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 /** `GET /doctors/{id}` public verified doctor profile. */
 export interface DoctorProfile {
   id: string;
   name?: string;
   email?: string;
   phone?: string;
-  /** Derived from `specialties[0]` when the API returns the array form. */
+  /** Primary specialization name */
   specialization?: string;
+  specializations?: SpecializationItem[];
   specialties?: string[];
   /** Spec returns a single string; array form tolerated. */
   qualifications?: string | string[];
   bio?: string;
-  consultationFee?: number;
+  consultationFee?: number | string;
   currency?: string;
-  rating?: number;
+  rating?: number | string;
   reviewCount?: number;
+  ratingCount?: number;
   totalReviews?: number;
   yearsExperience?: number;
   experienceYears?: number;
@@ -178,6 +188,12 @@ export interface DoctorProfile {
   verificationStatus?: VerificationStatus;
   licenseStatus?: VerificationStatus;
   licenseNumber?: string;
+  user?: {
+    id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 }
 
 /** `GET /doctors` list item. */
@@ -185,14 +201,26 @@ export interface DoctorListItem {
   id: string;
   name: string;
   avatarUrl?: string;
+  specialization?: string;
+  specializations?: SpecializationItem[];
   specialties?: string[];
-  consultationFee?: number;
+  consultationFee?: number | string;
   currency?: string;
-  rating?: number;
+  rating?: number | string;
+  ratingCount?: number;
   totalReviews?: number;
+  experienceYears?: number;
+  qualifications?: string | string[];
+  bio?: string;
   isFeatured?: boolean;
   matchedCondition?: string;
   nextAvailableSlot?: string;
+  user?: {
+    id?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 }
 
 /** `GET /doctors/{id}/slots`, `POST /doctors/me/slots`. */
@@ -363,6 +391,112 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 
 function str(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function parseNumber(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+/** Normalises a raw doctor record into DoctorListItem */
+export function normalizeDoctorListItem(raw: unknown): DoctorListItem | null {
+  const record = asRecord(raw);
+  if (!record) return null;
+
+  const id = str(record.id);
+  if (!id) return null;
+
+  const user = asRecord(record.user);
+  const name = str(user?.name) ?? str(record.name) ?? "Doctor";
+
+  // Specialization handling
+  const rawSpec = record.specialization;
+  const primarySpecName =
+    typeof rawSpec === "string"
+      ? str(rawSpec)
+      : str(asRecord(rawSpec)?.name);
+
+  // Specializations array handling
+  const rawSpecsList = Array.isArray(record.specializations)
+    ? record.specializations
+    : Array.isArray(record.specialties)
+    ? record.specialties
+    : [];
+
+  const specialties: string[] = [];
+  if (primarySpecName) {
+    specialties.push(primarySpecName);
+  }
+
+  for (const item of rawSpecsList) {
+    const specName =
+      typeof item === "string"
+        ? str(item)
+        : str(asRecord(item)?.name);
+    if (specName && !specialties.includes(specName)) {
+      specialties.push(specName);
+    }
+  }
+
+  const fee = parseNumber(record.consultationFee);
+  const rating = parseNumber(record.rating);
+  const ratingCount =
+    typeof record.ratingCount === "number"
+      ? record.ratingCount
+      : typeof record.totalReviews === "number"
+      ? record.totalReviews
+      : typeof record.reviewCount === "number"
+      ? record.reviewCount
+      : undefined;
+
+  const avatarUrl =
+    str(record.avatarUrl) ??
+    str(record.image) ??
+    str(record.imageUrl) ??
+    str(record.profileImage);
+
+  return {
+    ...record,
+    id,
+    name,
+    avatarUrl,
+    specialties,
+    specialization: primarySpecName ?? specialties[0],
+    consultationFee: fee,
+    currency: str(record.currency) ?? "USD",
+    rating,
+    ratingCount,
+    totalReviews: ratingCount,
+    experienceYears:
+      typeof record.experienceYears === "number"
+        ? record.experienceYears
+        : typeof record.yearsExperience === "number"
+        ? record.yearsExperience
+        : undefined,
+  };
+}
+
+/** Normalises a raw doctor record into DoctorProfile */
+export function normalizeDoctorProfile(raw: unknown): DoctorProfile | null {
+  const item = normalizeDoctorListItem(raw);
+  if (!item) return null;
+
+  const record = asRecord(raw) ?? {};
+  const user = asRecord(record.user);
+
+  return {
+    ...record,
+    ...item,
+    email: str(user?.email) ?? str(record.email),
+    phone: str(user?.phone) ?? str(record.phone),
+    bio: str(record.bio),
+    qualifications: record.qualifications as string | string[] | undefined,
+    yearsExperience: item.experienceYears,
+  };
 }
 
 /** Normalises an appointment object that may use `id` or `appointmentId`. */

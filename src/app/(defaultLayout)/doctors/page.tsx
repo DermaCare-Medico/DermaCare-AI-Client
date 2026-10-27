@@ -8,13 +8,6 @@ import { DataState } from "@/components/shared/DataState";
 import { DemoNotice } from "@/components/shared/DemoNotice";
 import { usePublicDoctors } from "@/src/hooks/usePublicCatalog";
 
-const SPECIALTY_FILTERS = [
-  "Acne & Scarring",
-  "Eczema & Psoriasis",
-  "Pigmentation & Melasma",
-  "Skin Cancer Screening",
-];
-
 export default function AllDoctorsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -29,8 +22,19 @@ export default function AllDoctorsPage() {
     [appliedSearch, specialty]
   );
 
-  const { doctors, isDemo, isLoading, isError, error, refetch } =
+  const { doctors, allDoctors, isDemo, isLoading, isError, error, refetch } =
     usePublicDoctors(args);
+
+  const availableSpecialties = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of allDoctors) {
+      if (d.specialization) set.add(d.specialization);
+      for (const s of d.specialties ?? []) {
+        if (s) set.add(s);
+      }
+    }
+    return Array.from(set).sort();
+  }, [allDoctors]);
 
   return (
     <section className="min-h-screen bg-[#F7F9FC] px-4 py-16 font-sans text-[#172033] sm:px-6 lg:px-8">
@@ -96,7 +100,7 @@ export default function AllDoctorsPage() {
             >
               All specialties
             </button>
-            {SPECIALTY_FILTERS.map((item) => (
+            {availableSpecialties.map((item) => (
               <button
                 key={item}
                 type="button"

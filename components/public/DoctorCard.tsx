@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Calendar, ShieldCheck, Star, Stethoscope } from "lucide-react";
 
 import { formatMoney } from "@/lib/api/format";
-import { formatDateTime } from "@/lib/doctor/utils";
+import { formatDateTime, formatRating } from "@/lib/doctor/utils";
 import type { DoctorListItem } from "@/types/doctor";
 
 /**
@@ -65,10 +65,10 @@ export function DoctorCard({ doctor }: { doctor: DoctorListItem }) {
         <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3 text-xs">
           <div className="flex items-center gap-1 font-semibold text-[#0F2942]">
             <Star className="h-3.5 w-3.5 fill-amber-400 stroke-amber-400" />
-            <span>{doctor.rating ?? "—"}</span>
-            {doctor.totalReviews !== undefined && (
+            <span>{formatRating(doctor.rating)}</span>
+            {(doctor.ratingCount !== undefined || doctor.totalReviews !== undefined) && (
               <span className="font-normal text-[#64748B]">
-                ({doctor.totalReviews})
+                ({doctor.ratingCount ?? doctor.totalReviews})
               </span>
             )}
           </div>
@@ -89,9 +89,9 @@ export function DoctorCard({ doctor }: { doctor: DoctorListItem }) {
               {spec}
             </span>
           ))}
-          {(doctor.specialties ?? []).length === 0 && (
-            <span className="text-[11px] text-[#64748B]">
-              General dermatology
+          {(doctor.specialties ?? []).length === 0 && doctor.specialization && (
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-[#64748B]">
+              {doctor.specialization}
             </span>
           )}
         </div>

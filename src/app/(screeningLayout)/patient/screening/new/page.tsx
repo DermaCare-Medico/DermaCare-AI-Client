@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import Link from "next/link";
-import { AlertTriangle, ArrowLeft, ImagePlus, LoaderCircle, ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ImagePlus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { formatConfidence, getPredictionFields, useCreateScreeningMutation, useUploadScreeningImageMutation, type ScreeningRecord } from "@/redux/api/screeningApi";
+import { useScreeningFlow, type ScreeningFormData } from "../screening-flow-context";
 import styles from "./page.module.css";
 
 const durationOptions = [
@@ -33,28 +33,13 @@ type YesNo = (typeof yesNoOptions)[number];
 type DurationOption = (typeof durationOptions)[number];
 type BodyArea = (typeof bodyAreas)[number];
 
-type ScreeningFormState = {
-  mainSymptom: string;
+type ScreeningFormState = ScreeningFormData & {
   bodyArea: BodyArea | "";
   duration: DurationOption | "";
   itching: YesNo | "";
   pain: YesNo | "";
   redness: YesNo | "";
   worsening: YesNo | "";
-  feverOrOtherSymptoms: string;
-  knownAllergies: string;
-  medicalContext: string;
-  notes: string;
-};
-
-type DemoResult = {
-  title: string;
-  summary: string;
-  confidence: string;
-  urgencyLabel: string;
-  isUrgent: boolean;
-  showSuggestions: boolean;
-  suggestions: string[];
 };
 
 const initialFormState: ScreeningFormState = {
@@ -74,16 +59,13 @@ const initialFormState: ScreeningFormState = {
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export default function NewSkinScreeningPage() {
+  const router = useRouter();
+  const { setPendingScreening } = useScreeningFlow();
   const [formData, setFormData] = useState<ScreeningFormState>(initialFormState);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState("");
   const [errors, setErrors] = useState<Partial<Record<keyof ScreeningFormState, string>>>({});
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [demoResult, setDemoResult] = useState<DemoResult | null>(null);
-  const [requestError, setRequestError] = useState("");
-  const [createScreening, createState] = useCreateScreeningMutation();
-  const [uploadImage, uploadState] = useUploadScreeningImageMutation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -119,14 +101,14 @@ export default function NewSkinScreeningPage() {
     }
 
     if (!file.type.includes("jpeg") && !file.type.includes("png")) {
-      setSelectedFile(null);
       setImageError("Please choose a JPG or PNG image under 10 MB.");
+      event.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setSelectedFile(null);
       setImageError("The image must be 10 MB or smaller.");
+      event.target.value = "";
       return;
     }
 
@@ -188,24 +170,8 @@ export default function NewSkinScreeningPage() {
       return;
     }
 
-    setIsAnalyzing(true);
-    setDemoResult(null);
-    setRequestError("");
-    try {
-      const symptoms = [formData.mainSymptom, `Area: ${formData.bodyArea}`, `Duration: ${formData.duration}`, formData.notes].filter(Boolean).join(". ");
-      const created = await createScreening({ symptoms, hasBleeding: false, rapidGrowth: formData.worsening === "Yes", hasFever: formData.feverOrOtherSymptoms.toLowerCase().includes("fever"), hasUlceration: false, severePain: formData.pain === "Yes" }).unwrap();
-      const screeningId = created.data.screeningId ?? created.data.id;
-      if (!screeningId) throw new Error("The screening API did not return a screening ID.");
-      const uploaded = await uploadImage({ screeningId, imageType: "FRONT", image: selectedFile }).unwrap();
-      const data: ScreeningRecord = uploaded.data;
-      const prediction = getPredictionFields(data);
-      const risk = String(data.riskLevel ?? "").toUpperCase();
-      setDemoResult({ title: prediction.condition === "Analysis pending" ? "Screening complete" : prediction.condition, summary: data.symptoms ?? "The screening was processed successfully. Open the report from screening history for full details.", confidence: formatConfidence(prediction.confidence), urgencyLabel: risk === "HIGH" ? "The screening is marked high risk. Seek prompt clinical review." : "Follow the care guidance in the screening report.", isUrgent: risk === "HIGH", showSuggestions: false, suggestions: [] });
-    } catch (error) {
-      if (error instanceof Error) setRequestError(error.message);
-      else if (typeof error === "object" && error && "data" in error && typeof error.data === "object" && error.data && "message" in error.data && typeof error.data.message === "string") setRequestError(error.data.message);
-      else setRequestError("The screening could not be completed. Please try again.");
-    } finally { setIsAnalyzing(false); }
+    setPendingScreening({ formData, image: selectedFile });
+    router.push("/patient/screening/result");
   };
 
   const handleReset = () => {
@@ -213,7 +179,7 @@ export default function NewSkinScreeningPage() {
     setFormData(initialFormState);
     setErrors({});
     setImageError("");
-    setDemoResult(null);
+    setPendingScreening(null);
   };
 
   const requiredFieldsComplete =
@@ -230,19 +196,19 @@ export default function NewSkinScreeningPage() {
   return (
     <div className={styles.page}>
       <header className={styles.pageHeader}>
-        <Link href="/patient/dashboard" className={styles.backLink}>
-          <ArrowLeft size={16} />
-          Back to dashboard
-        </Link>
+        {/* <Link href="/patient/dashboard" className={styles.backLink}>
+          <ArrowLeft size={16} /> */}
+          {/* Back to dashboard */}
+        {/* </Link> */}
         <div>
-          <p className={styles.eyebrow}>Skin screening</p>
+          {/* <p className={styles.eyebrow}>Skin screening</p> */}
           <h1>New Skin Screening</h1>
         </div>
       </header>
 
-      <p className={styles.pageDescription}>
+      {/* <p className={styles.pageDescription}>
         This tool provides preliminary screening support only and cannot diagnose skin conditions.
-      </p>
+      </p> */}
 
       <form className={styles.form} onSubmit={handleSubmit} noValidate>
         <section className={styles.panel}>
@@ -254,6 +220,43 @@ export default function NewSkinScreeningPage() {
           </div>
 
           <div className={styles.uploadBox}>
+            {previewUrl && selectedFile ? (
+              <div className={styles.previewWrap}>
+                <img
+                  src={previewUrl}
+                  alt={`Selected skin image: ${selectedFile.name}`}
+                  className={styles.previewImage}
+                />
+                <input
+                  id="skin-image-input"
+                  ref={fileInputRef}
+                  className={styles.previewInput}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                  onChange={handleFileSelection}
+                  aria-label="Replace selected skin image"
+                />
+                <div className={styles.previewFooter}>
+                  <span className={styles.fileName} title={selectedFile.name}>
+                    {selectedFile.name}
+                  </span>
+                  <div className={styles.previewActions}>
+                    <button
+                      type="button"
+                      className={styles.replaceButton}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <RefreshCw size={14} aria-hidden="true" />
+                      Replace Image
+                    </button>
+                    <button type="button" className={styles.removeButton} onClick={cleanupPreview}>
+                      <Trash2 size={14} aria-hidden="true" />
+                      Remove Image
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <label className={styles.uploadZone} htmlFor="skin-image-input">
               <input
                 id="skin-image-input"
@@ -270,20 +273,7 @@ export default function NewSkinScreeningPage() {
               <span className={styles.uploadHint}>JPG or PNG only · Max 10 MB</span>
               <span className={styles.browseButton}>Browse Files</span>
             </label>
-
-            {previewUrl ? (
-              <div className={styles.previewWrap}>
-                <img src={previewUrl} alt="Selected skin preview" className={styles.previewImage} />
-                <div className={styles.previewActions}>
-                  <button type="button" className={styles.linkButton} onClick={cleanupPreview}>
-                    Remove Image
-                  </button>
-                  <label className={styles.linkButton} htmlFor="skin-image-input">
-                    Replace Image
-                  </label>
-                </div>
-              </div>
-            ) : null}
+            )}
           </div>
 
           <p className={styles.infoText}>
@@ -485,27 +475,18 @@ export default function NewSkinScreeningPage() {
           <Button
             type="submit"
             className={styles.primaryButton}
-            disabled={isAnalyzing || createState.isLoading || uploadState.isLoading || !requiredFieldsComplete}
+            disabled={!requiredFieldsComplete}
           >
-            {isAnalyzing ? (
-              <>
-                <LoaderCircle className={styles.spinner} size={16} />
-                Analyzing...
-              </>
-            ) : (
-                "Analyze Skin"
-            )}
+            Analyze Skin
           </Button>
           <Button type="button" variant="ghost" className={styles.ghostButton} onClick={handleReset}>
             Start New Screening
           </Button>
         </div>
 
-        {requestError ? <p className={styles.errorText} role="alert">{requestError}</p> : null}
-
       </form>
 
-      {demoResult ? (
+      {/* Results are rendered by /patient/screening/result.
         <section className={styles.resultCard} aria-live="polite">
           <div className={styles.resultHeader}>
             <AlertTriangle size={16} />
@@ -552,7 +533,7 @@ export default function NewSkinScreeningPage() {
             </Button>
           </div>
         </section>
-      ) : null}
+      */}
     </div>
   );
 }

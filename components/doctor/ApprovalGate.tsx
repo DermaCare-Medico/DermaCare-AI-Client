@@ -13,9 +13,7 @@ import { useDecodedToken } from "@/src/hooks/useDecodedToken";
 import { DOCTOR_DEMO_ENABLED } from "@/src/app/(dashboardLayout)/doctor/mockData";
 import { readIdentity } from "@/lib/doctor/identity";
 import type { VerificationStatus } from "@/types/doctor";
-
-/** Routes a doctor may still reach while their license is not yet approved. */
-const PENDING_ALLOWED_PATHS = ["/doctor/pending-approval", "/doctor/profile"];
+import { getDoctorRouteAccess } from "./approval-access";
 
 /**
  * Protects the Doctor Module routes:
@@ -40,13 +38,18 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
   )?.toUpperCase();
 
   const status: VerificationStatus | undefined = identity.status;
-
-  const needsPendingRedirect =
-    !DOCTOR_DEMO_ENABLED &&
-    role === "DOCTOR" &&
-    status !== undefined &&
-    status !== "APPROVED" &&
-    !PENDING_ALLOWED_PATHS.some((p) => pathname.startsWith(p));
+  const access = getDoctorRouteAccess({
+    pathname,
+    role,
+    status,
+    demoEnabled: DOCTOR_DEMO_ENABLED,
+  });
+  const isClinicalDoctorRoute =
+    !pathname.startsWith("/doctor/application") &&
+    !pathname.startsWith("/doctor/pending-approval");
+  const isWaitingForDoctorStatus =
+    isLoading && role === "DOCTOR" && isClinicalDoctorRoute && !status;
+  const needsPendingRedirect = access === "redirect-pending" && !isLoading;
 
   useEffect(() => {
     if (needsPendingRedirect) {
@@ -70,7 +73,7 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
   }
 
   // Only block on loading while we have no decoded role to act on yet.
-  if (isLoading && !role) {
+  if (isLoading && (!role || isWaitingForDoctorStatus)) {
     return (
       <div className="space-y-3" aria-busy="true">
         <Skeleton className="h-8 w-56" />
@@ -91,7 +94,7 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (!DOCTOR_DEMO_ENABLED && role && role !== "DOCTOR" && role !== "ADMIN") {
+  if (access === "deny-role") {
     return (
       <GateMessage
         icon={<ShieldAlert size={22} className="text-rose-500" />}

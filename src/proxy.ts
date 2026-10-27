@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 const publicRoutes = ["/login", "/register", "/verify-email", "/forgot-password", "/reset-password", "/change-password"];
 const isPublicRoute = (pathname: string) => publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+const screeningRoutes = new Set(["/patient/screening/new", "/patient/screening/result"]);
+const isScreeningReportRoute = (pathname: string) => /^\/patient\/screening\/[^/]+$/.test(pathname);
+
+const destinationForRole = (role: string) =>
+  role === "ADMIN"
+    ? "/admin/dashboard"
+    : role === "DOCTOR"
+      ? "/doctor"
+      : role === "PATIENT"
+        ? "/patient/dashboard"
+        : "/user";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -23,12 +34,14 @@ export function proxy(request: NextRequest) {
   if (protectedRoute && !token) return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url));
   if (role) {
     if (pathname.startsWith("/admin") && role !== "ADMIN") return NextResponse.redirect(new URL("/", request.url));
-    if (pathname.startsWith("/patient") && role !== "PATIENT") return NextResponse.redirect(new URL("/", request.url));
+    if ((screeningRoutes.has(pathname) || isScreeningReportRoute(pathname)) && role !== "PATIENT" && role !== "USER") {
+      return NextResponse.redirect(new URL(destinationForRole(role), request.url));
+    }
+    if (pathname.startsWith("/patient") && !screeningRoutes.has(pathname) && !isScreeningReportRoute(pathname) && role !== "PATIENT") return NextResponse.redirect(new URL("/", request.url));
     const applicantRoute = pathname === "/doctor/application" || pathname === "/doctor/pending-approval";
     if (pathname.startsWith("/doctor") && role !== "DOCTOR" && !(role === "USER" && applicantRoute)) return NextResponse.redirect(new URL("/", request.url));
     if (isPublicRoute(pathname)) {
-      const destination = role === "ADMIN" ? "/admin/dashboard" : role === "DOCTOR" ? "/doctor" : role === "PATIENT" ? "/patient/dashboard" : "/user";
-      return NextResponse.redirect(new URL(destination, request.url));
+      return NextResponse.redirect(new URL(destinationForRole(role), request.url));
     }
   }
   return NextResponse.next();

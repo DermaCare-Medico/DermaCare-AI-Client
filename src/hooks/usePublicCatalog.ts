@@ -14,8 +14,13 @@ import {
   PUBLIC_DEMO_ENABLED,
   demoMedicines,
 } from "@/lib/public/demoData";
-import { extractList, unwrapEnvelope } from "@/types/doctor";
-import type { DoctorListItem, DoctorProfile, DoctorSlot, Medicine } from "@/types/doctor";
+import {
+  extractList,
+  normalizeDoctorListItem,
+  normalizeDoctorProfile,
+  unwrapEnvelope,
+} from "@/types/doctor";
+import type { DoctorListItem, DoctorSlot, Medicine } from "@/types/doctor";
 
 /**
  * Public Pages data hooks.
@@ -26,10 +31,12 @@ import type { DoctorListItem, DoctorProfile, DoctorSlot, Medicine } from "@/type
 
 export function usePublicDoctors(args?: DoctorSearchArgs) {
   const query = useGetDoctorsQuery(args);
-  const live = useMemo(
-    () => extractList<DoctorListItem>(unwrapEnvelope(query.data)),
-    [query.data]
-  );
+  const live = useMemo(() => {
+    const rawList = extractList<unknown>(unwrapEnvelope(query.data));
+    return rawList
+      .map(normalizeDoctorListItem)
+      .filter((d): d is DoctorListItem => Boolean(d));
+  }, [query.data]);
   const isDemo = false;
 
   const rawSearch = args?.search;
@@ -55,6 +62,7 @@ export function usePublicDoctors(args?: DoctorSearchArgs) {
 
   return {
     doctors,
+    allDoctors: live,
     isDemo,
     isLoading: query.isLoading,
     isError: query.isError && !isDemo,
@@ -69,9 +77,7 @@ export function usePublicDoctor(doctorId: string | undefined) {
   });
   const live = useMemo(() => {
     const payload = unwrapEnvelope(query.data);
-    return payload && typeof payload === "object"
-      ? (payload as DoctorProfile)
-      : undefined;
+    return payload ? normalizeDoctorProfile(payload) ?? undefined : undefined;
   }, [query.data]);
 
   const isDemo = false;

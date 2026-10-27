@@ -21,6 +21,8 @@ import {
   useState,
 } from "react";
 import styles from "../auth.module.css";
+import { setDoctorOnboarding } from "@/src/utils/doctorOnboarding";
+import { useRouter } from "next/navigation";
 
 type Role = Extract<RegistrationRole, "PATIENT" | "DOCTOR">;
 type CoreField =
@@ -42,7 +44,7 @@ type CoreValues = {
 };
 type Errors = Partial<Record<CoreField, string>>;
 type UploadKey = "license" | "supporting";
-type Upload = { name: string; size: string; previewUrl?: string };
+type Upload = { name: string; size: string; file: File; previewUrl?: string };
 
 const initialValues: CoreValues = {
   name: "",
@@ -124,6 +126,7 @@ function apiErrorMessage(error: unknown): string {
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
   const demoMode = isDemoAuthEnabled();
   const [role, setRole] = useState<Role>("PATIENT");
   const [values, setValues] = useState<CoreValues>(initialValues);
@@ -185,9 +188,9 @@ export default function RegisterPage() {
   function selectFile(key: UploadKey, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const validType = ["application/pdf", "image/jpeg", "image/png"].includes(file.type);
-    if (!validType || file.size > 5 * 1024 * 1024) {
-      setRequestError("Upload a PDF, JPG or PNG file no larger than 5 MB.");
+    const validType = ["image/jpeg", "image/png"].includes(file.type);
+    if (!validType || file.size > 10 * 1024 * 1024) {
+      setRequestError("Upload a JPG or PNG image no larger than 10 MB.");
       event.target.value = "";
       return;
     }
@@ -197,6 +200,7 @@ export default function RegisterPage() {
       [key]: {
         name: file.name,
         size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        file,
         previewUrl: file.type.startsWith("image/")
           ? URL.createObjectURL(file)
           : undefined,
@@ -222,6 +226,27 @@ export default function RegisterPage() {
     setSubmitted(true);
     if (Object.keys(nextErrors).length > 0) return;
 
+    if (role === "DOCTOR") {
+      const experienceYears = Number(profile.experience);
+      const consultationFee = Number(profile.fee);
+      if (!profile.specialization.trim() || !profile.licenseNumber.trim() || !profile.qualifications.trim()) {
+        setRequestError("Complete the required professional information.");
+        return;
+      }
+      if (!profile.experience.trim() || !Number.isInteger(experienceYears) || experienceYears < 0) {
+        setRequestError("Enter valid years of experience.");
+        return;
+      }
+      if (!profile.fee.trim() || !Number.isFinite(consultationFee) || consultationFee < 0) {
+        setRequestError("Enter a valid consultation fee.");
+        return;
+      }
+      if (!uploads.license) {
+        setRequestError("Upload your medical license image.");
+        return;
+      }
+    }
+
     submitting.current = true;
     setRequestError("");
 
@@ -246,9 +271,22 @@ export default function RegisterPage() {
         return;
       }
       await register(payload).unwrap();
-      window.location.assign(
-        `/verify-email?email=${encodeURIComponent(payload.email)}&role=${role}`,
-      );
+      if (role === "DOCTOR") {
+        setDoctorOnboarding({
+          email: payload.email,
+          password: payload.password,
+          licenseNumber: profile.licenseNumber.trim(),
+          qualifications: profile.qualifications,
+          experienceYears: profile.experience,
+          consultationFee: profile.fee,
+          specializationIds: profile.specialization,
+          bio: profile.institution.trim(),
+          documents: [uploads.license?.file, uploads.supporting?.file].filter(
+            (file): file is File => Boolean(file),
+          ),
+        });
+      }
+      router.push(`/verify-email?email=${encodeURIComponent(payload.email)}&role=${role}`);
     } catch (error: unknown) {
       setRequestError(apiErrorMessage(error));
     } finally {
@@ -315,12 +353,12 @@ export default function RegisterPage() {
                   <span>UI preview · not submitted</span>
                 </div>
                 <div className={styles.fields}>
-                  <InputField id="specialization" label="Specialization" value={profile.specialization} onChange={(v) => updateProfile("specialization", v)} />
+                  <InputField id="specialization" label="Specialization ID(s)" value={profile.specialization} onChange={(v) => updateProfile("specialization", v)} />
                   <InputField id="license-number" label="Medical license number" value={profile.licenseNumber} onChange={(v) => updateProfile("licenseNumber", v)} />
                   <InputField id="experience" label="Years of experience" type="number" value={profile.experience} onChange={(v) => updateProfile("experience", v)} />
                   <InputField id="fee" label="Consultation fee (BDT)" type="number" value={profile.fee} onChange={(v) => updateProfile("fee", v)} />
                   <TextArea id="qualifications" label="Qualifications" value={profile.qualifications} onChange={(v) => updateProfile("qualifications", v)} />
-                  <InputField id="institution" label="Medical College / University" value={profile.institution} onChange={(v) => updateProfile("institution", v)} />
+                  <InputField id="institution" label="Professional biography (optional)" value={profile.institution} onChange={(v) => updateProfile("institution", v)} />
                   <UploadField id="license-upload" label="Medical license" file={uploads.license} onSelect={(e) => selectFile("license", e)} onRemove={() => removeFile("license")} />
                   <UploadField id="supporting-upload" label="Supporting document" file={uploads.supporting} onSelect={(e) => selectFile("supporting", e)} onRemove={() => removeFile("supporting")} />
                 </div>
