@@ -12,11 +12,16 @@ export function dashboardForRole(
   verificationStatus?: string | null
 ) {
   const normalized = role?.toUpperCase();
+  const status = verificationStatus?.toUpperCase();
+  if (doctorApplicant) {
+    return status === "PENDING_REVIEW" || status === "REJECTED"
+      ? "/doctor/pending-approval"
+      : "/doctor/application";
+  }
   switch (normalized) {
     case "ADMIN":
       return "/admin/dashboard";
     case "DOCTOR": {
-      const status = verificationStatus?.toUpperCase();
       if (status === "NOT_SUBMITTED") return "/doctor/application";
       if (status === "PENDING_REVIEW" || status === "REJECTED") return "/doctor/pending-approval";
       return "/doctor";
@@ -24,7 +29,7 @@ export function dashboardForRole(
     case "PATIENT":
       return "/patient/dashboard";
     default:
-      return doctorApplicant ? "/doctor/application" : "/user";
+      return "/user";
   }
 }
 
@@ -60,10 +65,18 @@ export function destinationAfterLogin(role?: string | null, returnPath?: string 
     safePath === "/patient/screening/new" ||
     safePath === "/patient/screening/result" ||
     Boolean(safePath && /^\/patient\/screening\/[^/?#]+$/.test(safePath));
+  const isDoctorApplicationPath = safePath === "/doctor/application";
 
   if (
     safePath &&
     isScreeningPath &&
+    (normalizedRole === "PATIENT" || normalizedRole === "USER")
+  ) {
+    return safePath;
+  }
+
+  if (
+    isDoctorApplicationPath &&
     (normalizedRole === "PATIENT" || normalizedRole === "USER")
   ) {
     return safePath;

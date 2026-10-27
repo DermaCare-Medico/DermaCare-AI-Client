@@ -54,14 +54,24 @@ export function isToday(iso?: string | null): boolean {
   );
 }
 
-/** Formats a number as USD currency. */
-export function formatCurrency(value?: number | null): string {
-  if (value === undefined || value === null || Number.isNaN(value)) return "—";
+/** Formats a numeric or decimal string value as USD currency. */
+export function formatCurrency(value?: number | string | null): string {
+  if (value === undefined || value === null) return "—";
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return "—";
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(numeric);
+}
+
+/** Formats a rating value (numeric or decimal string, e.g. "4.98") to 2 decimal places. */
+export function formatRating(value?: number | string | null): string {
+  if (value === undefined || value === null) return "—";
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) return "—";
+  return numeric.toFixed(2);
 }
 
 export interface StatusMeta {

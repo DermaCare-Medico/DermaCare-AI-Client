@@ -2,7 +2,7 @@
 
 import Footer from "@/components/Common/Footer/Footer";
 import Navbar from "@/components/Common/Navbar/Navbar";
-import { useResendOtpMutation, useVerifyOtpMutation } from "@/redux/api/authApi";
+import { useLoginMutation, useResendOtpMutation, useVerifyOtpMutation } from "@/redux/api/authApi";
 import {
   DEMO_ACCOUNT,
   DEMO_OTP,
@@ -17,6 +17,8 @@ import styles from "../auth.module.css";
 import { useAppDispatch } from "@/redux/hooks";
 import { setSession } from "@/redux/features/authSlice";
 import { dashboardForRole, sessionFromResponse } from "@/src/utils/auth";
+import { getDoctorOnboarding } from "@/src/utils/doctorOnboarding";
+import { useRouter } from "next/navigation";
 
 const OTP_LENGTH = 6;
 const RESEND_DELAY_SECONDS = 60;
@@ -39,6 +41,7 @@ function apiErrorMessage(error: unknown, fallback: string): string {
 }
 
 export default function VerifyEmailPage() {
+  const router = useRouter();
   const demoMode = isDemoAuthEnabled();
   const [email, setEmail] = useState("");
   const [registrationRole, setRegistrationRole] = useState<"PATIENT" | "DOCTOR">("PATIENT");
@@ -51,6 +54,7 @@ export default function VerifyEmailPage() {
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const submissionInFlight = useRef(false);
   const [verifyEmail, { isLoading: isVerifying }] = useVerifyOtpMutation();
+  const [login, { isLoading: isLoggingIn }] = useLoginMutation();
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
   const dispatch = useAppDispatch();
 
@@ -83,6 +87,7 @@ export default function VerifyEmailPage() {
 
   const code = digits.join("");
   const canVerify = Boolean(email) && code.length === OTP_LENGTH && !successMessage;
+  const isCompletingVerification = isVerifying || isLoggingIn;
 
   function setDigitAt(index: number, value: string) {
     const numeric = value.replace(/\D/g, "");
@@ -136,7 +141,7 @@ export default function VerifyEmailPage() {
   }
 
   async function handleVerify() {
-    if (!email || submissionInFlight.current || isVerifying) return;
+    if (!email || submissionInFlight.current || isCompletingVerification) return;
 
     if (demoMode) {
       if (code !== DEMO_OTP) {
@@ -168,12 +173,39 @@ export default function VerifyEmailPage() {
     setInputError("");
     try {
       const response = await verifyEmail({ email, otp: code }).unwrap();
-      const session = sessionFromResponse(response);
-      if (session) dispatch(setSession(session));
-      setSuccessMessage("Your email has been verified. You can now sign in.");
+      let session = sessionFromResponse(response);
+      const onboarding = registrationRole === "DOCTOR" ? getDoctorOnboarding() : null;
+      if (!session && onboarding?.email === email && onboarding.password) {
+        session = sessionFromResponse(
+          await login({ email, password: onboarding.password }).unwrap(),
+        );
+      }
+      if (session) {
+        dispatch(setSession({
+          ...session,
+          user: registrationRole === "DOCTOR"
+            ? { ...(session.user ?? {}), isDoctorApplicant: true }
+            : session.user,
+        }));
+      }
+      if (registrationRole === "DOCTOR" && !session) {
+        setSuccessMessage("Your email was verified. Please sign in to resume your doctor application.");
+        setDigits(Array<string>(OTP_LENGTH).fill(""));
+        window.setTimeout(() => {
+          router.push("/login?redirect=%2Fdoctor%2Fapplication");
+        }, 500);
+        return;
+      }
+      setSuccessMessage("Your email has been verified.");
       setDigits(Array<string>(OTP_LENGTH).fill(""));
       window.setTimeout(() => {
-        window.location.assign(session ? dashboardForRole(session.user?.role, registrationRole === "DOCTOR") : "/login");
+        router.push(
+          registrationRole === "DOCTOR" && session
+            ? "/doctor/application"
+            : session
+              ? dashboardForRole(session.user?.role)
+              : "/login",
+        );
       }, 500);
     } catch (error: unknown) {
       setRequestError(apiErrorMessage(error, "We couldn’t verify that code. Please try again."));
@@ -286,12 +318,12 @@ export default function VerifyEmailPage() {
 
                 <button
                   className={styles.submitButton}
-                  disabled={!canVerify || isVerifying}
+                  disabled={!canVerify || isCompletingVerification}
                   onClick={handleVerify}
                   type="button"
                 >
-                  {isVerifying ? "Verifying…" : demoMode ? "Verify demo code" : "Verify email"}
-                  {!isVerifying && <ShieldCheck size={18} aria-hidden="true" />}
+                  {isCompletingVerification ? "Verifying…" : demoMode ? "Verify demo code" : "Verify email"}
+                  {!isCompletingVerification && <ShieldCheck size={18} aria-hidden="true" />}
                 </button>
 
                 <div className={styles.resendRow}>

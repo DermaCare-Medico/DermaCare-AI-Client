@@ -26,6 +26,7 @@ import {
   extractList,
   normalizeAppointmentDetail,
   normalizeAppointments,
+  normalizeDoctorProfile,
   unwrapEnvelope,
 } from "@/types/doctor";
 import type {
@@ -118,9 +119,7 @@ export function useDoctorProfile(doctorId?: string) {
   const query = useGetDoctorByIdQuery(id, { skip: !doctorId });
   const data = useMemo(() => {
     const payload = unwrapEnvelope(query.data);
-    return payload && typeof payload === "object"
-      ? (payload as DoctorProfile)
-      : undefined;
+    return payload ? normalizeDoctorProfile(payload) ?? undefined : undefined;
   }, [query.data]);
 
   const isDemo = (!doctorId || query.isError) && DOCTOR_DEMO_ENABLED;

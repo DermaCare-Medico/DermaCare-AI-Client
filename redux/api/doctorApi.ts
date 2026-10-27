@@ -73,7 +73,7 @@ export interface DoctorApplicationRequest {
   qualifications: string[];
   experienceYears: number;
   consultationFee: number;
-  bio: string;
+  bio?: string;
   specializationIds: string[];
   documentReferences: string[];
 }

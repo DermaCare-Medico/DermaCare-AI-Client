@@ -15,7 +15,7 @@ import {
 import { DataState } from "@/components/shared/DataState";
 import { DemoNotice } from "@/components/shared/DemoNotice";
 import { formatMoney } from "@/lib/api/format";
-import { formatCurrency, formatDateTime, qualificationList } from "@/lib/doctor/utils";
+import { formatCurrency, formatDateTime, formatRating, qualificationList } from "@/lib/doctor/utils";
 import { usePublicDoctor, usePublicDoctorSlots } from "@/src/hooks/usePublicCatalog";
 import { useAppSelector } from "@/redux/hooks";
 import { useBookAppointmentMutation } from "@/redux/api/appointmentApi";
@@ -117,19 +117,19 @@ export default function PublicDoctorProfilePage() {
                     <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-[#64748B]">
                       <span className="inline-flex items-center gap-1 font-semibold text-[#0F2942]">
                         <Star className="h-4 w-4 fill-amber-400 stroke-amber-400" />
-                        {doctor.rating ?? "—"}
-                        {(doctor.reviewCount ?? doctor.totalReviews) !==
+                        {formatRating(doctor.rating)}
+                        {(doctor.ratingCount ?? doctor.reviewCount ?? doctor.totalReviews) !==
                           undefined && (
                           <span className="font-normal text-[#64748B]">
-                            ({doctor.reviewCount ?? doctor.totalReviews} reviews)
+                            ({doctor.ratingCount ?? doctor.reviewCount ?? doctor.totalReviews} reviews)
                           </span>
                         )}
                       </span>
-                      {(doctor.yearsExperience ?? doctor.experienceYears) !==
+                      {(doctor.experienceYears ?? doctor.yearsExperience) !==
                         undefined && (
                         <span className="inline-flex items-center gap-1">
                           <GraduationCap size={15} />
-                          {doctor.yearsExperience ?? doctor.experienceYears} years experience
+                          {doctor.experienceYears ?? doctor.yearsExperience} years experience
                         </span>
                       )}
                     </div>
