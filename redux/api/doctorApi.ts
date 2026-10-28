@@ -32,6 +32,11 @@ export interface AppointmentListArgs {
   limit?: number;
 }
 
+export interface DoctorDashboardAppointments {
+  appointments: AppointmentDetail[];
+  pagination: { total: number; totalPages: number };
+}
+
 export interface PrescriptionListArgs {
   status?: "DRAFT" | "FINALIZED";
   page?: number;
@@ -52,7 +57,6 @@ export interface SlotListArgs {
 export interface CreateSlotArgs {
   startTime: string;
   endTime: string;
-  fee?: number;
 }
 
 export interface UpdateSlotArgs {
@@ -65,6 +69,9 @@ export interface CreatePrescriptionArgs {
   appointmentId: string;
   diagnosis: string;
   doctorNotes?: string;
+  findings?: string;
+  advice?: string;
+  followUp?: string;
   items: PrescriptionItem[];
 }
 
@@ -76,6 +83,12 @@ export interface DoctorApplicationRequest {
   bio?: string;
   specializationIds: string[];
   documentReferences: string[];
+}
+
+export interface Specialization {
+  id: string;
+  name: string;
+  slug?: string;
 }
 
 export interface UpdateConsultationArgs {
@@ -94,6 +107,12 @@ export interface ConsultationNoteArgs {
 
 export const doctorApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getSpecializations: builder.query<Specialization[], void>({
+      query: () => "/specializations",
+      transformResponse: (response: ApiEnvelope<Specialization[]> | Specialization[]) =>
+        Array.isArray(response) ? response : response.data,
+    }),
+
     uploadDoctorApplicationDocument: builder.mutation<
       ApiEnvelope<{ documentReference: string }>,
       File
@@ -118,17 +137,25 @@ export const doctorApi = baseApi.injectEndpoints({
       AppointmentListArgs | void
     >({
       query: (args) => ({
-        url: "/appointments",
+        url: "/doctors/me/appointments",
         params: args
-          ? { status: args.status, page: args.page, limit: args.limit }
+          ? {
+              status: args.status,
+              page: Math.max(1, args.page ?? 1),
+              limit: Math.min(50, Math.max(1, args.limit ?? 10)),
+            }
           : undefined,
+        cache: "no-store",
       }),
       providesTags: [{ type: "Appointments" as const, id: "LIST" }],
     }),
 
     /** GET /appointments/{id} — authorized appointment details. */
     getAppointmentById: builder.query<ApiEnvelope<AppointmentDetail>, string>({
-      query: (id) => `/appointments/${id}`,
+      query: (id) => ({
+        url: `/doctors/me/appointments/${id}`,
+        cache: "no-store",
+      }),
       providesTags: (_result, _error, id) => [
         { type: "Appointments" as const, id },
       ],
@@ -188,7 +215,11 @@ export const doctorApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: [{ type: "Prescriptions" as const, id: "LIST" }],
+      invalidatesTags: (_result, _error, { appointmentId }) => [
+        { type: "Prescriptions" as const, id: "LIST" },
+        { type: "Appointments" as const, id: appointmentId },
+        { type: "Appointments" as const, id: "LIST" },
+      ],
     }),
 
     /** GET /prescriptions — role-scoped prescription list. */
@@ -253,6 +284,7 @@ export const doctorApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, id) => [
         { type: "Prescriptions" as const, id },
         { type: "Prescriptions" as const, id: "LIST" },
+        { type: "Appointments" as const, id: "LIST" },
       ],
     }),
 
@@ -380,7 +412,7 @@ export const doctorApi = baseApi.injectEndpoints({
 
     /** GET /doctors/me/profile � doctor own profile. */
     getOwnDoctorProfile: builder.query<ApiEnvelope<DoctorProfile>, void>({
-      query: () => "/doctors/me/profile",
+      query: () => ({ url: "/doctors/me/profile", cache: "no-store" }),
       providesTags: ["DoctorProfile"],
     }),
 
@@ -399,13 +431,16 @@ export const doctorApi = baseApi.injectEndpoints({
 
     /** GET /doctors/me/slots � list doctor's own slots. */
     getOwnDoctorSlots: builder.query<ApiEnvelope<unknown>, void>({
-      query: () => "/doctors/me/slots",
+      query: () => ({ url: "/doctors/me/slots", cache: "no-store" }),
       providesTags: [{ type: "DoctorSlots" as const, id: "LIST" }],
     }),
 
     /** GET /doctors/me/appointment-requests � pending appointment requests. */
     getDoctorAppointmentRequests: builder.query<ApiEnvelope<unknown>, void>({
-      query: () => "/doctors/me/appointment-requests",
+      query: () => ({
+        url: "/doctors/me/appointment-requests",
+        cache: "no-store",
+      }),
       providesTags: [{ type: "Appointments" as const, id: "REQUESTS" }],
     }),
 
@@ -416,8 +451,44 @@ export const doctorApi = baseApi.injectEndpoints({
     >({
       query: (params) => ({
         url: "/doctors/me/appointments",
-        params: params || undefined,
+        params: params
+          ? {
+              ...params,
+              page: Math.max(1, params.page ?? 1),
+              limit: Math.min(50, Math.max(1, params.limit ?? 10)),
+            }
+          : undefined,
+        cache: "no-store",
       }),
+      providesTags: [{ type: "Appointments" as const, id: "LIST" }],
+    }),
+
+    /** Loads every valid doctor-owned page for exact dashboard counters. */
+    getDoctorDashboardAppointments: builder.query<DoctorDashboardAppointments, void>({
+      async queryFn(_arg, _api, _extraOptions, baseQuery) {
+        const appointments: AppointmentDetail[] = [];
+        let page = 1;
+        let totalPages = 1;
+        let total = 0;
+
+        do {
+          const result = await baseQuery({
+            url: "/doctors/me/appointments",
+            params: { page, limit: 50 },
+            cache: "no-store",
+          });
+          if (result.error) return { error: result.error };
+
+          const response = result.data as ApiEnvelope<AppointmentDetail[]>;
+          if (Array.isArray(response?.data)) appointments.push(...response.data);
+          const pagination = response?.pagination;
+          total = pagination?.totalCount ?? pagination?.total ?? appointments.length;
+          totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(total / 50));
+          page += 1;
+        } while (page <= totalPages);
+
+        return { data: { appointments, pagination: { total, totalPages } } };
+      },
       providesTags: [{ type: "Appointments" as const, id: "LIST" }],
     }),
 
@@ -525,6 +596,7 @@ export const doctorApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetSpecializationsQuery,
   useUploadDoctorApplicationDocumentMutation,
   useSubmitDoctorApplicationMutation,
   useGetAppointmentsQuery,
@@ -556,6 +628,7 @@ export const {
   useGetOwnDoctorSlotsQuery,
   useGetDoctorAppointmentRequestsQuery,
   useGetDoctorAppointmentsQuery,
+  useGetDoctorDashboardAppointmentsQuery,
   useDecideAppointmentRequestMutation,
   useCompleteDoctorConsultationMutation,
   useGetDoctorPrescriptionsQuery,

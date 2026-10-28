@@ -178,10 +178,10 @@ export default function StorePage() {
           </div>
         </DataState>
 
-        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
+        {/* <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
           Educational prototype: orders and payments are simulated. No real
           medicine is sold and no real money is charged.
-        </p>
+        </p> */}
       </div>
     </section>
   );

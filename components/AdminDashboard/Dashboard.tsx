@@ -11,21 +11,43 @@ import {
   Loader2,
   CalendarCheck,
 } from "lucide-react";
-import { useGetAdminDashboardSummaryQuery } from "@/redux/api/adminApi";
+import {
+  adminCollection,
+  adminCollectionTotal,
+  unwrapAdminPayload,
+  useGetAdminDashboardSummaryQuery,
+  useGetAdminDoctorApprovalsQuery,
+  useGetAdminUsersQuery,
+} from "@/redux/api/adminApi";
+
+function metric(source: Record<string, unknown>, keys: string[]) {
+  const nested = [source.analytics, source.stats, source.overview].find(
+    (value): value is Record<string, unknown> => typeof value === "object" && value !== null,
+  );
+  const value = keys.map((key) => source[key] ?? nested?.[key]).find((item) => item !== undefined);
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
 
 export default function Dashboard() {
-  const { data, isLoading, isError, refetch } = useGetAdminDashboardSummaryQuery();
+  const summaryQuery = useGetAdminDashboardSummaryQuery();
+  const usersQuery = useGetAdminUsersQuery({ page: 1, limit: 5 });
+  const approvalsQuery = useGetAdminDoctorApprovalsQuery({ page: 1, limit: 100 });
 
-  const summary = (data?.data ?? data ?? {}) as Record<string, unknown>;
+  const summaryPayload = unwrapAdminPayload(summaryQuery.data);
+  const summary = (typeof summaryPayload === "object" && summaryPayload !== null ? summaryPayload : {}) as Record<string, unknown>;
 
-  const totalUsers = (summary.totalUsers ?? summary.usersCount ?? summary.users ?? 0) as number;
-  const verifiedDoctors = (summary.verifiedDoctors ?? summary.doctorsCount ?? summary.approvedDoctors ?? 0) as number;
-  const pendingApprovals = (summary.pendingApprovals ?? summary.pendingDoctorsCount ?? summary.pendingDoctors ?? 0) as number;
-  const totalAppointments = (summary.totalAppointments ?? summary.appointmentsCount ?? summary.appointments ?? 0) as number;
+  const totalUsers = metric(summary, ["totalUsers", "usersCount", "users"]);
+  const verifiedDoctors = metric(summary, ["verifiedDoctors", "doctorsCount", "approvedDoctors"]);
+  const totalAppointments = metric(summary, ["totalAppointments", "appointmentsCount", "appointments"]);
 
-  const recentUsers: Record<string, unknown>[] = (
-    (summary.recentUsers ?? summary.latestUsers ?? summary.usersList ?? []) as unknown[]
-  ).filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null);
+  const recentUsers = adminCollection(usersQuery.data, ["users"]);
+  const approvals = adminCollection(approvalsQuery.data, ["approvals", "applications"]);
+  const pendingApprovals = adminCollectionTotal(approvalsQuery.data, approvals.length);
+  const initialLoading = summaryQuery.isLoading && !summaryQuery.data;
+  const approvalsLoading = approvalsQuery.isLoading && !approvalsQuery.data;
+  const hasError = summaryQuery.isError || usersQuery.isError || approvalsQuery.isError;
+  const isRefreshing = summaryQuery.isFetching || usersQuery.isFetching || approvalsQuery.isFetching;
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-7">
@@ -48,19 +70,19 @@ export default function Dashboard() {
           <ClipboardCheck size={16} />
           Review queue
           <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px]">
-            {isLoading ? "..." : pendingApprovals}
+            {approvalsLoading ? "…" : pendingApprovals}
           </span>
         </Link>
       </section>
 
-      {isError && (
+      {hasError && (
         <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
           <div className="flex items-center gap-2">
             <AlertCircle size={18} className="text-rose-600 shrink-0" />
-            <span>Failed to load live dashboard summary. Showing zeroed counters.</span>
+            <span>Some admin dashboard data could not be loaded.</span>
           </div>
           <button
-            onClick={() => refetch()}
+            onClick={() => { summaryQuery.refetch(); usersQuery.refetch(); approvalsQuery.refetch(); }}
             className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
           >
             Retry
@@ -68,7 +90,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isLoading ? (
+      {initialLoading ? (
         <div className="grid min-h-[160px] place-items-center rounded-2xl border border-slate-200 bg-white">
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Loader2 size={18} className="animate-spin text-[#0F888D]" />
@@ -234,7 +256,7 @@ export default function Dashboard() {
             </div>
             <div className="mt-7 flex items-end gap-3">
               <p className="text-5xl font-semibold tracking-tight text-[#163A5F]">
-                {isLoading ? "..." : pendingApprovals}
+                {approvalsLoading ? "…" : pendingApprovals}
               </p>
               <p className="mb-1 text-xs text-slate-500">
                 doctor applications
@@ -254,7 +276,7 @@ export default function Dashboard() {
 
       <footer className="flex items-center justify-between border-t border-slate-200/70 pt-4 text-[11px] text-slate-400">
         <span>DermaCare AI - Admin workspace</span>
-        <span>Connected to backend API</span>
+        <span>{isRefreshing && !initialLoading ? "Refreshing…" : "Connected to backend API"}</span>
       </footer>
     </div>
   );

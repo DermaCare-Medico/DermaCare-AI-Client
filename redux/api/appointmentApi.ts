@@ -2,7 +2,26 @@ import { baseApi } from "./baseApi";
 import type { ApiEnvelope } from "@/types/doctor";
 
 export interface BookAppointmentRequest { doctorId: string; slotId: string; screeningId?: string; historySharingConsent: boolean }
-export interface PatientAppointment { id?: string; appointmentId?: string; status?: string; doctorId?: string; doctor?: { id?: string; name?: string; specialties?: string[] }; slot?: { startTime?: string; endTime?: string }; scheduledTime?: string; consultationFee?: number; paymentStatus?: string; cancellationReason?: string; [key: string]: unknown }
+export interface PatientAppointment {
+  id?: string;
+  appointmentId?: string;
+  status?: string;
+  doctorId?: string;
+  doctor?: {
+    id?: string;
+    name?: string;
+    specialties?: string[];
+    specialization?: { id?: string; name?: string } | null;
+  };
+  slot?: { startTime?: string; endTime?: string };
+  scheduledTime?: string;
+  consultationFee?: number;
+  paymentStatus?: string;
+  videoLink?: string | null;
+  meetingProvisioningStatus?: string | null;
+  cancellationReason?: string;
+  [key: string]: unknown;
+}
 export interface AppointmentListArgs { page?: number; limit?: number; status?: string }
 
 export const appointmentApi = baseApi.injectEndpoints({ endpoints: (builder) => ({

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Search, Users, AlertCircle, Loader2 } from "lucide-react";
-import { useGetAdminUsersQuery, useUpdateAdminUserStatusMutation } from "@/redux/api/adminApi";
+import { adminCollection, adminCollectionTotal, useGetAdminUsersQuery, useUpdateAdminUserStatusMutation } from "@/redux/api/adminApi";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,30 +13,14 @@ export default function UserPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [targetUser, setTargetUser] = useState<Record<string, unknown> | null>(null);
 
-  const { data, isLoading, isError, refetch } = useGetAdminUsersQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useGetAdminUsersQuery({
     role: roleFilter === "ALL" ? undefined : roleFilter,
     status: statusFilter === "ALL" ? undefined : statusFilter,
   });
 
   const [updateUserStatus, { isLoading: isUpdating }] = useUpdateAdminUserStatusMutation();
 
-  const rawUsers = data?.data ?? data;
-  const userList: Record<string, unknown>[] = useMemo(() => {
-    if (Array.isArray(rawUsers)) {
-      return rawUsers.filter((u): u is Record<string, unknown> => typeof u === "object" && u !== null);
-    }
-    if (rawUsers && typeof rawUsers === "object") {
-      const usersProp = (rawUsers as Record<string, unknown>).users;
-      if (Array.isArray(usersProp)) {
-        return usersProp.filter((u): u is Record<string, unknown> => typeof u === "object" && u !== null);
-      }
-      const itemsProp = (rawUsers as Record<string, unknown>).items;
-      if (Array.isArray(itemsProp)) {
-        return itemsProp.filter((u): u is Record<string, unknown> => typeof u === "object" && u !== null);
-      }
-    }
-    return [];
-  }, [rawUsers]);
+  const userList = useMemo(() => adminCollection(data, ["users"]), [data]);
 
   const filteredUsers = useMemo(() => {
     return userList.filter((user) => {
@@ -50,7 +34,7 @@ export default function UserPage() {
     });
   }, [userList, query]);
 
-  const totalCount = userList.length;
+  const totalCount = adminCollectionTotal(data, userList.length);
   const patientCount = userList.filter((u) => String(u.role ?? "").toUpperCase() === "PATIENT").length;
   const doctorCount = userList.filter((u) => String(u.role ?? "").toUpperCase() === "DOCTOR").length;
 
@@ -124,7 +108,7 @@ export default function UserPage() {
           <div>
             <h2 className="font-semibold text-[#163A5F]">All accounts</h2>
             <p className="mt-1 text-xs text-slate-500">
-              {isLoading ? "Fetching accounts..." : `Showing ${filteredUsers.length} users`}
+              {isLoading && !data ? "Fetching accounts..." : `${isFetching ? "Refreshing · " : ""}Showing ${filteredUsers.length} users`}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -163,7 +147,7 @@ export default function UserPage() {
         </div>
 
         <div className="overflow-x-auto">
-          {isLoading ? (
+          {isLoading && !data ? (
             <div className="grid min-h-[180px] place-items-center">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 size={18} className="animate-spin text-[#0F888D]" />

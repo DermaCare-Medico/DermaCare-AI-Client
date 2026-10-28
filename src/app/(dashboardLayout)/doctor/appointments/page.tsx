@@ -17,7 +17,7 @@ import {
   useDecideAppointmentRequestMutation,
 } from "@/redux/api/doctorApi";
 import type { AppointmentStatus } from "@/types/doctor";
-import { APPOINTMENT_STATUSES } from "@/types/doctor";
+import { APPOINTMENT_STATUSES, normalizeAppointments, unwrapEnvelope } from "@/types/doctor";
 
 type Filter = "ALL" | "REQUESTS" | AppointmentStatus;
 
@@ -30,43 +30,28 @@ const filters: { value: Filter; label: string }[] = [
   })),
 ];
 
-interface AppointmentRequestItem {
-  id: string;
-  patientName?: string;
-  patientId?: string;
-  scheduledTime?: string;
-  notes?: string;
-}
-
 export default function DoctorAppointmentsPage() {
   const [filter, setFilter] = useState<Filter>("ALL");
+  const [page, setPage] = useState(1);
   const status = filter === "ALL" || filter === "REQUESTS" ? undefined : filter;
 
-  const { appointments, isDemo, isLoading, isError, error, refetch } =
-    useDoctorAppointments(status);
+  const { appointments, pagination, isDemo, isLoading, isError, error, refetch } =
+    useDoctorAppointments(status, page, 10);
 
   const {
     data: rawRequests,
     isLoading: requestsLoading,
+    isError: requestsError,
+    error: requestsErrorValue,
     refetch: refetchRequests,
   } = useGetDoctorAppointmentRequestsQuery();
 
   const [decideRequest, decideState] = useDecideAppointmentRequestMutation();
 
-  const pendingRequests = useMemo<AppointmentRequestItem[]>(() => {
-    if (!rawRequests) return [];
-    const body = (rawRequests as { data?: unknown }).data ?? rawRequests;
-    if (Array.isArray(body)) {
-      return body.map((item: Record<string, unknown>, idx: number) => ({
-        id: String(item.id || item.appointmentId || `req-${idx}`),
-        patientName: String(item.patientName || (item.patient as Record<string, unknown>)?.name || "Patient"),
-        patientId: String(item.patientId || ""),
-        scheduledTime: String(item.scheduledTime || item.startTime || ""),
-        notes: item.notes ? String(item.notes) : undefined,
-      }));
-    }
-    return [];
-  }, [rawRequests]);
+  const pendingRequests = useMemo(
+    () => normalizeAppointments(unwrapEnvelope(rawRequests)),
+    [rawRequests]
+  );
 
   const handleDecision = async (appointmentId: string, action: "ACCEPT" | "REJECT") => {
     try {
@@ -133,7 +118,7 @@ export default function DoctorAppointmentsPage() {
             type="button"
             role="tab"
             aria-selected={filter === item.value}
-            onClick={() => setFilter(item.value)}
+            onClick={() => { setFilter(item.value); setPage(1); }}
             className={cn(
               "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
               filter === item.value
@@ -154,6 +139,8 @@ export default function DoctorAppointmentsPage() {
       {filter === "REQUESTS" ? (
         <DataState
           isLoading={requestsLoading}
+          isError={requestsError}
+          error={requestsErrorValue}
           isEmpty={pendingRequests.length === 0}
           emptyTitle="No pending requests"
           emptyMessage="You do not have any appointment requests awaiting review."
@@ -162,7 +149,7 @@ export default function DoctorAppointmentsPage() {
           <div className="space-y-3">
             {pendingRequests.map((req) => (
               <div
-                key={req.id}
+                key={req.appointmentId}
                 className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center"
               >
                 <div>
@@ -176,16 +163,13 @@ export default function DoctorAppointmentsPage() {
                       {formatDateTime(req.scheduledTime)}
                     </p>
                   )}
-                  {req.notes && (
-                    <p className="mt-1 text-xs text-slate-400">Note: {req.notes}</p>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     className="bg-[#0F888D] hover:bg-[#0C7479]"
                     disabled={decideState.isLoading}
-                    onClick={() => handleDecision(req.id, "ACCEPT")}
+                    onClick={() => handleDecision(req.appointmentId, "ACCEPT")}
                   >
                     <Check size={14} className="mr-1" /> Accept
                   </Button>
@@ -194,7 +178,7 @@ export default function DoctorAppointmentsPage() {
                     variant="outline"
                     className="text-rose-600 hover:bg-rose-50"
                     disabled={decideState.isLoading}
-                    onClick={() => handleDecision(req.id, "REJECT")}
+                    onClick={() => handleDecision(req.appointmentId, "REJECT")}
                   >
                     <X size={14} className="mr-1" /> Reject
                   </Button>
@@ -221,6 +205,19 @@ export default function DoctorAppointmentsPage() {
               />
             ))}
           </div>
+          {(pagination?.totalPages ?? 1) > 1 && (
+            <div className="mt-6 flex items-center justify-between">
+              <Button variant="outline" disabled={page <= 1 || isLoading} onClick={() => setPage((value) => value - 1)}>
+                Previous
+              </Button>
+              <span className="text-sm text-slate-500">
+                Page {pagination?.page ?? page} of {pagination?.totalPages}
+              </span>
+              <Button variant="outline" disabled={page >= (pagination?.totalPages ?? 1) || isLoading} onClick={() => setPage((value) => value + 1)}>
+                Next
+              </Button>
+            </div>
+          )}
         </DataState>
       )}
     </section>

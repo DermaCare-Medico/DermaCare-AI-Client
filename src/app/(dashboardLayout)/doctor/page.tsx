@@ -11,17 +11,22 @@ import {
 
 import { AppointmentCard } from "@/components/doctor/AppointmentCard";
 import { DataState } from "@/components/shared/DataState";
-import { DemoNotice } from "@/components/shared/DemoNotice";
 import { PageHeader } from "@/components/doctor/PageHeader";
 import { StatCard } from "@/components/doctor/StatCard";
-import { useDoctorAppointments } from "@/src/hooks/useDoctorModule";
+import {
+  useGetDoctorAppointmentRequestsQuery,
+  useGetDoctorDashboardAppointmentsQuery,
+} from "@/redux/api/doctorApi";
+import { normalizeAppointments, unwrapEnvelope } from "@/types/doctor";
 import { useAppSelector } from "@/redux/hooks";
 import { useDecodedToken } from "@/src/hooks/useDecodedToken";
 import { isToday } from "@/lib/doctor/utils";
 
 export default function DoctorDashboardPage() {
-  const { appointments, isDemo, isLoading, isError, error, refetch } =
-    useDoctorAppointments();
+  const appointmentsQuery = useGetDoctorDashboardAppointmentsQuery();
+  const appointments = normalizeAppointments(appointmentsQuery.data?.appointments);
+  const requestsQuery = useGetDoctorAppointmentRequestsQuery();
+  const pendingRequests = normalizeAppointments(unwrapEnvelope(requestsQuery.data));
 
   const token = useAppSelector((state) => state.auth.token);
   const decoded = useDecodedToken(token);
@@ -40,20 +45,21 @@ export default function DoctorDashboardPage() {
     .filter(
       (a) =>
         isToday(a.scheduledTime) &&
-        (a.status === "SCHEDULED" || a.status === "IN_PROGRESS")
+        (["SCHEDULED", "CONFIRMED", "IN_PROGRESS"] as string[]).includes(a.status)
     )
     .sort(
       (a, b) =>
         new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime()
     );
 
-  const pendingRequests = appointments.filter(
-    (a) => a.status === "CANCELLATION_REQUESTED"
-  );
-
-  const completed = appointments.filter((a) => a.status === "COMPLETED");
-
-  const scheduled = appointments.filter((a) => a.status === "SCHEDULED");
+  const completedCount = appointmentsQuery.isError
+    ? "—"
+    : appointments.filter((appointment) => appointment.status === "COMPLETED").length;
+  const scheduledCount = appointmentsQuery.isError
+    ? "—"
+    : appointments.filter((appointment) =>
+        ["SCHEDULED", "CONFIRMED"].includes(appointment.status)
+      ).length;
 
   return (
     <section>
@@ -71,30 +77,28 @@ export default function DoctorDashboardPage() {
         }
       />
 
-      {isDemo && <DemoNotice className="mb-6" />}
-
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Pending requests"
-          value={pendingRequests.length}
+          value={requestsQuery.isError ? "—" : pendingRequests.length}
           icon={Inbox}
-          hint="Cancellation requests awaiting review"
+          hint="Booking requests awaiting review"
         />
         <StatCard
           title="Today's appointments"
-          value={todaysAppointments.length}
+          value={appointmentsQuery.isError ? "—" : todaysAppointments.length}
           icon={CalendarClock}
           hint="Scheduled or in progress today"
         />
         <StatCard
           title="Completed consultations"
-          value={completed.length}
+          value={completedCount}
           icon={CheckCircle2}
           hint="All-time completed"
         />
         <StatCard
           title="Upcoming scheduled"
-          value={scheduled.length}
+          value={scheduledCount}
           icon={CalendarCheck}
           hint="Booked and not started"
         />
@@ -106,13 +110,13 @@ export default function DoctorDashboardPage() {
             Today&apos;s appointments
           </h2>
           <DataState
-            isLoading={isLoading}
-            isError={isError}
-            error={error}
+            isLoading={appointmentsQuery.isLoading}
+            isError={appointmentsQuery.isError}
+            error={appointmentsQuery.error}
             isEmpty={todaysAppointments.length === 0}
             emptyTitle="No appointments today"
             emptyMessage="Your schedule for today is clear."
-            onRetry={refetch}
+            onRetry={appointmentsQuery.refetch}
           >
             <div className="space-y-3">
               {todaysAppointments.map((appointment) => (
@@ -130,13 +134,13 @@ export default function DoctorDashboardPage() {
             Pending requests
           </h2>
           <DataState
-            isLoading={isLoading}
-            isError={isError}
-            error={error}
+            isLoading={requestsQuery.isLoading}
+            isError={requestsQuery.isError}
+            error={requestsQuery.error}
             isEmpty={pendingRequests.length === 0}
             emptyTitle="No pending requests"
-            emptyMessage="Cancellation requests from patients will appear here."
-            onRetry={refetch}
+            emptyMessage="New booking requests from patients will appear here."
+            onRetry={requestsQuery.refetch}
           >
             <div className="space-y-3">
               {pendingRequests.map((appointment) => (

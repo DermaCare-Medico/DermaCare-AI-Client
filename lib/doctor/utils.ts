@@ -81,9 +81,13 @@ export interface StatusMeta {
 
 /** Tailwind classes for each appointment status badge. */
 export const appointmentStatusMeta: Record<AppointmentStatus, StatusMeta> = {
+  PENDING: { label: "Pending", className: "bg-amber-100 text-amber-800" },
+  CONFIRMED: { label: "Confirmed", className: "bg-[#E8F5F4] text-[#0F777E]" },
   SCHEDULED: { label: "Scheduled", className: "bg-[#E8F5F4] text-[#0F777E]" },
   IN_PROGRESS: { label: "In progress", className: "bg-amber-100 text-amber-800" },
   COMPLETED: { label: "Completed", className: "bg-emerald-100 text-emerald-800" },
+  REJECTED: { label: "Rejected", className: "bg-rose-100 text-rose-700" },
+  NO_SHOW: { label: "No show", className: "bg-slate-100 text-slate-600" },
   CANCELLED: { label: "Cancelled", className: "bg-slate-100 text-slate-600" },
   CANCELLATION_REQUESTED: {
     label: "Cancellation requested",

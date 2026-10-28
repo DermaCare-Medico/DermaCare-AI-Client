@@ -42,5 +42,9 @@ export function getApiErrorMessage(
   }
   if (rtk.status === 401) return "Your session has expired. Please sign in again.";
   if (rtk.status === 403) return "You are not authorized to perform this action.";
+  if (rtk.status === 404) return "The requested record was not found or is no longer available.";
+  if (typeof rtk.status === "number" && rtk.status >= 500) {
+    return "The server could not complete this request. Please retry shortly.";
+  }
   return fallback;
 }

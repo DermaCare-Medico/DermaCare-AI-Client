@@ -13,7 +13,6 @@ import {
   HeartPulse,
   Loader2,
   Pill,
-  PlayCircle,
   ShieldAlert,
   StopCircle,
   UserRound,
@@ -52,7 +51,7 @@ import {
   useSendPrescriptionToPatientMutation,
   useGetAppointmentVideoQuery,
   useReviewCancellationMutation,
-  useUpdateConsultationMutation,
+  useCompleteDoctorConsultationMutation,
 } from "@/redux/api/doctorApi";
 import {
   useDoctorAppointmentDetail,
@@ -142,7 +141,7 @@ export default function DoctorAppointmentDetailPage() {
 
   const pre = useDoctorPreConsultation(id);
 
-  const { prescriptions, isDemo: rxDemo } = useDoctorPrescriptions();
+  const { prescriptions, isDemo: rxDemo, refetch: refetchPrescriptions } = useDoctorPrescriptions();
   const appointmentPrescriptions = useMemo(
     () =>
       prescriptions.filter(
@@ -159,7 +158,7 @@ export default function DoctorAppointmentDetailPage() {
     error: medsErr,
   } = useDoctorMedications(appointment?.patientId);
 
-  const [updateConsultation, updateState] = useUpdateConsultationMutation();
+  const [completeConsultation, completeState] = useCompleteDoctorConsultationMutation();
   const [reviewCancellation, reviewState] = useReviewCancellationMutation();
   const [cancelAppointment, cancelState] = useCancelAppointmentMutation();
   const [finalizePrescription, finalizeState] = useFinalizePrescriptionMutation();
@@ -174,7 +173,6 @@ export default function DoctorAppointmentDetailPage() {
     }
   }
 
-  const [completionSummary, setCompletionSummary] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [prescriptionOpen, setPrescriptionOpen] = useState(false);
@@ -193,18 +191,13 @@ export default function DoctorAppointmentDetailPage() {
 
   const status = appointment?.status;
 
-  async function handleTransition(next: "IN_PROGRESS" | "COMPLETED") {
+  async function handleComplete() {
     if (!id) return;
     try {
-      await updateConsultation({
-        id,
-        status: next,
-        completionSummary: next === "COMPLETED" ? completionSummary.trim() || undefined : undefined,
-      }).unwrap();
-      toast.success(next === "IN_PROGRESS" ? "Consultation started." : "Consultation completed.");
-      if (next === "COMPLETED") setCompletionSummary("");
+      await completeConsultation(id).unwrap();
+      toast.success("Consultation completed.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Could not update the consultation."));
+      toast.error(getApiErrorMessage(err, "Could not complete the consultation."));
     }
   }
 
@@ -579,41 +572,19 @@ export default function DoctorAppointmentDetailPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {status === "SCHEDULED" && (
+                    {(["CONFIRMED", "SCHEDULED", "IN_PROGRESS"] as string[]).includes(status ?? "") && (
                       <Button
                         className="w-full bg-[#0F888D] hover:bg-[#0C7479]"
-                        disabled={updateState.isLoading}
-                        onClick={() => handleTransition("IN_PROGRESS")}
+                        disabled={completeState.isLoading}
+                        onClick={handleComplete}
                       >
-                        {updateState.isLoading ? (
+                        {completeState.isLoading ? (
                           <Loader2 className="animate-spin" size={16} />
                         ) : (
-                          <PlayCircle size={16} />
+                          <StopCircle size={16} />
                         )}
-                        Start consultation
+                        Complete consultation
                       </Button>
-                    )}
-
-                    {status === "IN_PROGRESS" && (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={completionSummary}
-                          onChange={(e) => setCompletionSummary(e.target.value)}
-                          placeholder="Completion summary (optional)"
-                        />
-                        <Button
-                          className="w-full bg-[#0F888D] hover:bg-[#0C7479]"
-                          disabled={updateState.isLoading}
-                          onClick={() => handleTransition("COMPLETED")}
-                        >
-                          {updateState.isLoading ? (
-                            <Loader2 className="animate-spin" size={16} />
-                          ) : (
-                            <StopCircle size={16} />
-                          )}
-                          Complete consultation
-                        </Button>
-                      </div>
                     )}
 
                     {status === "CANCELLATION_REQUESTED" && (
@@ -647,7 +618,8 @@ export default function DoctorAppointmentDetailPage() {
                       </div>
                     )}
 
-                    {(status === "SCHEDULED" ||
+                    {(status === "CONFIRMED" ||
+                      status === "SCHEDULED" ||
                       status === "IN_PROGRESS" ||
                       status === "COMPLETED") && (
                       <>
@@ -678,7 +650,7 @@ export default function DoctorAppointmentDetailPage() {
                             Join secure video consultation
                           </a>
                         )}
-                        {(status === "SCHEDULED" || status === "IN_PROGRESS") && (
+                        {(status === "CONFIRMED" || status === "SCHEDULED" || status === "IN_PROGRESS") && (
                           <Button
                             variant="outline"
                             className="w-full text-rose-600 hover:text-rose-700"
@@ -736,6 +708,10 @@ export default function DoctorAppointmentDetailPage() {
               appointmentId={appointment.appointmentId}
               open={prescriptionOpen}
               onOpenChange={setPrescriptionOpen}
+              onSuccess={() => {
+                refetch();
+                refetchPrescriptions();
+              }}
             />
 
             <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>

@@ -27,6 +27,7 @@ interface PrescriptionDialogProps {
   appointmentId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
 interface EditableItem {
@@ -70,16 +71,18 @@ export function PrescriptionDialog({
   appointmentId,
   open,
   onOpenChange,
+  onSuccess,
 }: PrescriptionDialogProps) {
   const [diagnosis, setDiagnosis] = useState("");
   const [doctorNotes, setDoctorNotes] = useState("");
   const [items, setItems] = useState<EditableItem[]>([emptyItem()]);
   const [alsoFinalize, setAlsoFinalize] = useState(true);
+  const [draftPrescriptionId, setDraftPrescriptionId] = useState<string | null>(null);
 
   const [createPrescription, createState] = useCreatePrescriptionMutation();
-  const [finalizePrescription] = useFinalizePrescriptionMutation();
+  const [finalizePrescription, finalizeState] = useFinalizePrescriptionMutation();
 
-  const isSubmitting = createState.isLoading;
+  const isSubmitting = createState.isLoading || finalizeState.isLoading;
 
   function updateItem(key: string, patch: Partial<EditableItem>) {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)));
@@ -90,18 +93,40 @@ export function PrescriptionDialog({
     setDoctorNotes("");
     setItems([emptyItem()]);
     setAlsoFinalize(true);
+    setDraftPrescriptionId(null);
+  }
+
+  async function handleFinalizeExistingDraft(idToFinalize: string) {
+    try {
+      await finalizePrescription(idToFinalize).unwrap();
+      toast.success("Prescription finalized and submitted.");
+      reset();
+      onOpenChange(false);
+      onSuccess?.();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not finalize the prescription draft."));
+    }
   }
 
   async function handleSubmit() {
+    if (draftPrescriptionId) {
+      await handleFinalizeExistingDraft(draftPrescriptionId);
+      return;
+    }
+
     const cleanItems: PrescriptionItem[] = items
       .filter((it) => it.medicineName.trim())
-      .map((it) => ({
-        medicineName: it.medicineName.trim(),
-        dosage: it.dosage.trim() || "As directed",
-        frequency: it.frequency.trim() || "As directed",
-        durationDays: Number(it.durationDays) || 1,
-        instructions: it.instructions.trim() || undefined,
-      }));
+      .map((it) => {
+        const days = Math.max(1, parseInt(it.durationDays, 10) || 1);
+        return {
+          medicineName: it.medicineName.trim(),
+          dosage: it.dosage.trim() || "As directed",
+          frequency: it.frequency.trim() || "As directed",
+          durationDays: days,
+          duration: `${days} day${days > 1 ? "s" : ""}`,
+          instructions: it.instructions.trim() || undefined,
+        };
+      });
 
     if (!diagnosis.trim()) {
       toast.error("Please enter a diagnosis before saving the prescription.");
@@ -112,31 +137,55 @@ export function PrescriptionDialog({
       return;
     }
 
+    let createdPrescriptionId: string | undefined;
+
     try {
       const created = await createPrescription({
         appointmentId,
         diagnosis: diagnosis.trim(),
         doctorNotes: doctorNotes.trim() || undefined,
+        findings: diagnosis.trim(),
+        advice: doctorNotes.trim() || undefined,
         items: cleanItems,
       }).unwrap();
 
-      const prescriptionId = extractPrescriptionId(created);
+      createdPrescriptionId = extractPrescriptionId(created);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Could not create the prescription."));
+      return;
+    }
 
-      if (alsoFinalize && prescriptionId) {
-        await finalizePrescription(prescriptionId).unwrap();
-        toast.success("Prescription finalized and submitted.");
-      } else if (alsoFinalize && !prescriptionId) {
-        toast.success("Prescription draft saved.");
-        toast.message("Finalize it from the prescriptions list once the id is available.");
-      } else {
-        toast.success("Prescription draft saved.");
-      }
-
+    if (!alsoFinalize) {
+      toast.success("Prescription draft saved.");
       reset();
       onOpenChange(false);
+      onSuccess?.();
+      return;
+    }
+
+    if (!createdPrescriptionId) {
+      toast.success("Prescription draft saved.");
+      toast.message("Finalize it from the prescriptions list once the ID is available.");
+      reset();
+      onOpenChange(false);
+      onSuccess?.();
+      return;
+    }
+
+    try {
+      await finalizePrescription(createdPrescriptionId).unwrap();
+      toast.success("Prescription finalized and submitted.");
+      reset();
+      onOpenChange(false);
+      onSuccess?.();
     } catch (error) {
-      // A failed real request must never look like success.
-      toast.error(getApiErrorMessage(error, "Could not save the prescription."));
+      setDraftPrescriptionId(createdPrescriptionId);
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Draft was created, but finalization failed. You can retry finalization without creating a duplicate."
+        )
+      );
     }
   }
 
@@ -252,10 +301,20 @@ export function PrescriptionDialog({
             ))}
           </div>
 
+          {draftPrescriptionId && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <p className="font-semibold">Draft created successfully</p>
+              <p className="mt-1">
+                The draft has been saved on the appointment (ID: {draftPrescriptionId}). Finalization could not be completed. You can retry finalizing below without creating a duplicate.
+              </p>
+            </div>
+          )}
+
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input
               type="checkbox"
               checked={alsoFinalize}
+              disabled={Boolean(draftPrescriptionId)}
               onChange={(e) => setAlsoFinalize(e.target.checked)}
               className="size-4 rounded border-slate-300 accent-[#0F888D]"
             />
@@ -272,7 +331,13 @@ export function PrescriptionDialog({
             disabled={isSubmitting}
             className="bg-[#0F888D] hover:bg-[#0C7479]"
           >
-            {isSubmitting ? "Saving…" : alsoFinalize ? "Create & finalize" : "Save draft"}
+            {isSubmitting
+              ? "Saving…"
+              : draftPrescriptionId
+              ? "Retry finalization"
+              : alsoFinalize
+              ? "Create & finalize"
+              : "Save draft"}
           </Button>
         </DialogFooter>
       </DialogContent>

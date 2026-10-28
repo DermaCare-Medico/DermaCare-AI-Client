@@ -8,6 +8,7 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useGetMeQuery } from "@/redux/api/authApi";
+import { useGetOwnDoctorProfileQuery } from "@/redux/api/doctorApi";
 import { useAppSelector } from "@/redux/hooks";
 import { useDecodedToken } from "@/src/hooks/useDecodedToken";
 import { DOCTOR_DEMO_ENABLED } from "@/src/app/(dashboardLayout)/doctor/mockData";
@@ -27,8 +28,11 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
   const token = useAppSelector((state) => state.auth.token);
   const decoded = useDecodedToken(token);
 
-  const { data, isLoading, isError } = useGetMeQuery(undefined, {
+  const { data, isLoading: identityLoading, isError: identityError } = useGetMeQuery(undefined, {
     skip: !token,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
   });
 
   const identity = readIdentity(data);
@@ -36,26 +40,40 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
     identity.role ??
     (typeof decoded?.role === "string" ? decoded.role : undefined)
   )?.toUpperCase();
+  const profileQuery = useGetOwnDoctorProfileQuery(undefined, {
+    skip: !token,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
+  const profileIdentity = readIdentity(profileQuery.data);
 
-  const status: VerificationStatus | undefined = identity.status;
+  const status: VerificationStatus | undefined = profileIdentity.status ?? identity.status;
   const access = getDoctorRouteAccess({
     pathname,
     role,
     status,
     demoEnabled: DOCTOR_DEMO_ENABLED,
   });
-  const isClinicalDoctorRoute =
-    !pathname.startsWith("/doctor/application") &&
-    !pathname.startsWith("/doctor/pending-approval");
   const isWaitingForDoctorStatus =
-    isLoading && role === "DOCTOR" && isClinicalDoctorRoute && !status;
-  const needsPendingRedirect = access === "redirect-pending" && !isLoading;
+    role === "DOCTOR" && !status && (identityLoading || profileQuery.isLoading);
+  const isOnboardingRoute =
+    pathname.startsWith("/doctor/application") ||
+    pathname.startsWith("/doctor/pending-approval");
+  const loading =
+    identityLoading ||
+    isWaitingForDoctorStatus ||
+    (isOnboardingRoute && profileQuery.isLoading);
+  const needsPendingRedirect = access === "redirect-pending" && !loading;
+  const needsApprovedRedirect = access === "redirect-approved" && !loading;
 
   useEffect(() => {
-    if (needsPendingRedirect) {
+    if (needsApprovedRedirect) {
+      router.replace("/doctor/profile");
+    } else if (needsPendingRedirect) {
       router.replace("/doctor/pending-approval");
     }
-  }, [needsPendingRedirect, router]);
+  }, [needsApprovedRedirect, needsPendingRedirect, router]);
 
   if (!token) {
     return (
@@ -73,7 +91,7 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
   }
 
   // Only block on loading while we have no decoded role to act on yet.
-  if (isLoading && (!role || isWaitingForDoctorStatus)) {
+  if (loading && (!role || isWaitingForDoctorStatus)) {
     return (
       <div className="space-y-3" aria-busy="true">
         <Skeleton className="h-8 w-56" />
@@ -84,7 +102,7 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
   }
 
   // Real API failures must not be masked; in demo mode we allow the doctor UI.
-  if (isError && !DOCTOR_DEMO_ENABLED && !role) {
+  if ((identityError || profileQuery.isError) && !DOCTOR_DEMO_ENABLED && (!role || (role === "DOCTOR" && !status))) {
     return (
       <GateMessage
         icon={<ShieldAlert size={22} className="text-rose-500" />}
@@ -110,6 +128,16 @@ export function DoctorApprovalGate({ children }: { children: React.ReactNode }) 
         icon={<ShieldCheck size={22} className="text-amber-500" />}
         title="Approval pending"
         message="Your medical license is still under review. Redirecting you to your approval status…"
+      />
+    );
+  }
+
+  if (needsApprovedRedirect) {
+    return (
+      <GateMessage
+        icon={<ShieldCheck size={22} className="text-emerald-600" />}
+        title="License approved"
+        message="Your doctor profile is approved. Redirecting you to the dashboard…"
       />
     );
   }
