@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   Clock,
@@ -25,6 +26,7 @@ import { PageHeader } from "@/components/doctor/PageHeader";
 import { VerificationStatusBadge } from "@/components/doctor/StatusBadge";
 
 import { useGetMeQuery } from "@/redux/api/authApi";
+import { useGetOwnDoctorProfileQuery } from "@/redux/api/doctorApi";
 import { useAppSelector } from "@/redux/hooks";
 import { readIdentity } from "@/lib/doctor/identity";
 import { formatDate, getApiErrorMessage } from "@/lib/doctor/utils";
@@ -50,14 +52,42 @@ const copy: Record<VerificationStatus, { title: string; body: string }> = {
 };
 
 export default function DoctorPendingApprovalPage() {
+  const router = useRouter();
   const token = useAppSelector((state) => state.auth.token);
-  const { data, isLoading, isError, error, refetch } = useGetMeQuery(undefined, {
+  const identityQuery = useGetMeQuery(undefined, {
     skip: !token,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
+  const profileQuery = useGetOwnDoctorProfileQuery(undefined, {
+    skip: !token,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
   });
 
-  const identity = useMemo(() => readIdentity(data), [data]);
-  const status: VerificationStatus = identity.status ?? "NOT_SUBMITTED";
-  const content = copy[status];
+  const authIdentity = useMemo(() => readIdentity(identityQuery.data), [identityQuery.data]);
+  const profileIdentity = useMemo(() => readIdentity(profileQuery.data), [profileQuery.data]);
+  const identity = {
+    id: profileIdentity.id ?? authIdentity.id,
+    name: profileIdentity.name ?? authIdentity.name,
+    email: profileIdentity.email ?? authIdentity.email,
+    role: authIdentity.role ?? profileIdentity.role,
+    licenseNumber: profileIdentity.licenseNumber ?? authIdentity.licenseNumber,
+    licenseSubmittedAt: profileIdentity.licenseSubmittedAt ?? authIdentity.licenseSubmittedAt,
+  };
+  const status: VerificationStatus | undefined = profileIdentity.status ?? authIdentity.status;
+  const content = status ? copy[status] : undefined;
+  const isLoading = identityQuery.isLoading || profileQuery.isLoading;
+  const isError = identityQuery.isError || profileQuery.isError;
+  const error = profileQuery.error ?? identityQuery.error;
+
+  useEffect(() => {
+    if (!isLoading && !isError && identity.role?.toUpperCase() === "DOCTOR" && status === "APPROVED") {
+      router.replace("/doctor");
+    }
+  }, [identity.role, isError, isLoading, router, status]);
 
   const Icon =
     status === "APPROVED"
@@ -74,7 +104,7 @@ export default function DoctorPendingApprovalPage() {
         eyebrow="Account approval"
         title="Verification status"
         description="Your doctor account is activated once your medical license is verified."
-        actions={<VerificationStatusBadge status={status} />}
+        actions={status ? <VerificationStatusBadge status={status} /> : undefined}
       />
 
       <Card className="max-w-2xl border-slate-200">
@@ -82,7 +112,7 @@ export default function DoctorPendingApprovalPage() {
           <span className="grid size-12 place-items-center rounded-xl bg-[#E8F5F4] text-[#0F888D]">
             <Icon size={22} />
           </span>
-          <CardTitle className="text-lg text-[#163A5F]">{content.title}</CardTitle>
+          <CardTitle className="text-lg text-[#163A5F]">{content?.title ?? "Verification status unavailable"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading && (
@@ -97,7 +127,7 @@ export default function DoctorPendingApprovalPage() {
               {getApiErrorMessage(error, "Could not load your verification status.")}{" "}
               <button
                 type="button"
-                onClick={() => refetch()}
+                onClick={() => { identityQuery.refetch(); profileQuery.refetch(); }}
                 className="font-semibold underline"
               >
                 Retry
@@ -105,7 +135,7 @@ export default function DoctorPendingApprovalPage() {
             </p>
           )}
 
-          {!isLoading && !isError && (
+          {!isLoading && !isError && status && content && (
             <>
               <p className="text-sm leading-6 text-slate-600">{content.body}</p>
 
@@ -145,6 +175,12 @@ export default function DoctorPendingApprovalPage() {
                 </Button>
               )}
             </>
+          )}
+          {!isLoading && !isError && !status && (
+            <p role="alert" className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              The backend did not return a recognized doctor approval status. Retry or sign in again before accessing clinical tools. {" "}
+              <button type="button" onClick={() => { identityQuery.refetch(); profileQuery.refetch(); }} className="font-semibold underline">Retry</button>
+            </p>
           )}
         </CardContent>
       </Card>

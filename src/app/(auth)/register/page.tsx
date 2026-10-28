@@ -23,6 +23,8 @@ import {
 import styles from "../auth.module.css";
 import { setDoctorOnboarding } from "@/src/utils/doctorOnboarding";
 import { useRouter } from "next/navigation";
+import { useGetSpecializationsQuery } from "@/redux/api/doctorApi";
+import { specializationList } from "@/src/utils/specializations";
 
 type Role = Extract<RegistrationRole, "PATIENT" | "DOCTOR">;
 type CoreField =
@@ -64,7 +66,6 @@ const emptyProfile = {
   allergies: "",
   conditions: "",
   medicines: "",
-  specialization: "",
   licenseNumber: "",
   experience: "",
   fee: "",
@@ -131,6 +132,7 @@ export default function RegisterPage() {
   const [role, setRole] = useState<Role>("PATIENT");
   const [values, setValues] = useState<CoreValues>(initialValues);
   const [profile, setProfile] = useState(emptyProfile);
+  const [specializationIds, setSpecializationIds] = useState<string[]>([]);
   const [uploads, setUploads] = useState<Partial<Record<UploadKey, Upload>>>({});
   const [errors, setErrors] = useState<Errors>({});
   const [touched, setTouched] = useState<Partial<Record<CoreField, boolean>>>({});
@@ -140,6 +142,8 @@ export default function RegisterPage() {
   const [requestError, setRequestError] = useState("");
   const submitting = useRef(false);
   const [register, { isLoading }] = useRegisterMutation();
+  const { data: specializationResponse, isLoading: specializationsLoading, isError: specializationsError, refetch: refetchSpecializations } = useGetSpecializationsQuery(undefined, { skip: role !== "DOCTOR" });
+  const specializations = specializationList(specializationResponse);
 
   useEffect(() => {
     return () => {
@@ -229,7 +233,7 @@ export default function RegisterPage() {
     if (role === "DOCTOR") {
       const experienceYears = Number(profile.experience);
       const consultationFee = Number(profile.fee);
-      if (!profile.specialization.trim() || !profile.licenseNumber.trim() || !profile.qualifications.trim()) {
+      if (specializationIds.length === 0 || !profile.licenseNumber.trim() || !profile.qualifications.trim()) {
         setRequestError("Complete the required professional information.");
         return;
       }
@@ -279,11 +283,12 @@ export default function RegisterPage() {
           qualifications: profile.qualifications,
           experienceYears: profile.experience,
           consultationFee: profile.fee,
-          specializationIds: profile.specialization,
+          specializationIds,
           bio: profile.institution.trim(),
           documents: [uploads.license?.file, uploads.supporting?.file].filter(
             (file): file is File => Boolean(file),
           ),
+          documentReferences: [],
         });
       }
       router.push(`/verify-email?email=${encodeURIComponent(payload.email)}&role=${role}`);
@@ -353,7 +358,21 @@ export default function RegisterPage() {
                   <span>UI preview · not submitted</span>
                 </div>
                 <div className={styles.fields}>
-                  <InputField id="specialization" label="Specialization ID(s)" value={profile.specialization} onChange={(v) => updateProfile("specialization", v)} />
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor="specialization">Specializations</label>
+                    <select
+                      aria-describedby="specialization-hint"
+                      className={styles.select}
+                      disabled={specializationsLoading || specializationsError}
+                      id="specialization"
+                      multiple
+                      onChange={(event) => setSpecializationIds(Array.from(event.currentTarget.selectedOptions, (option) => option.value))}
+                      value={specializationIds}
+                    >
+                      {specializations.map((specialization) => <option key={specialization.id} value={specialization.id}>{specialization.name}</option>)}
+                    </select>
+                    {specializationsError ? <p className={styles.error} id="specialization-hint">Specializations could not be loaded. <button type="button" onClick={() => refetchSpecializations()}>Try again</button></p> : <p className={styles.hint} id="specialization-hint">{specializationsLoading ? "Loading specializations…" : "Select one or more specialties."}</p>}
+                  </div>
                   <InputField id="license-number" label="Medical license number" value={profile.licenseNumber} onChange={(v) => updateProfile("licenseNumber", v)} />
                   <InputField id="experience" label="Years of experience" type="number" value={profile.experience} onChange={(v) => updateProfile("experience", v)} />
                   <InputField id="fee" label="Consultation fee (BDT)" type="number" value={profile.fee} onChange={(v) => updateProfile("fee", v)} />

@@ -30,8 +30,11 @@ export function proxy(request: NextRequest) {
       return response;
     }
   }
-  const protectedRoute = pathname.startsWith("/patient") || pathname.startsWith("/doctor") || pathname.startsWith("/admin") || pathname.startsWith("/user");
-  if (protectedRoute && !token) return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(pathname)}`, request.url));
+  const protectedRoute = pathname.startsWith("/patient") || pathname.startsWith("/doctor") || pathname.startsWith("/admin") || pathname.startsWith("/user") || pathname.startsWith("/payments");
+  if (protectedRoute && !token) {
+    const returnPath = `${pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(new URL(`/login?redirect=${encodeURIComponent(returnPath)}`, request.url));
+  }
   if (role) {
     if (pathname.startsWith("/admin") && role !== "ADMIN") return NextResponse.redirect(new URL("/", request.url));
     if ((screeningRoutes.has(pathname) || isScreeningReportRoute(pathname)) && role !== "PATIENT" && role !== "USER") {
@@ -39,7 +42,8 @@ export function proxy(request: NextRequest) {
     }
     if (pathname.startsWith("/patient") && !screeningRoutes.has(pathname) && !isScreeningReportRoute(pathname) && role !== "PATIENT") return NextResponse.redirect(new URL("/", request.url));
     const applicantRoute = pathname === "/doctor/application" || pathname === "/doctor/pending-approval";
-    if (pathname.startsWith("/doctor") && role !== "DOCTOR" && !(role === "USER" && applicantRoute)) return NextResponse.redirect(new URL("/", request.url));
+    const isApplicantRole = role === "USER" || role === "PATIENT";
+    if (pathname.startsWith("/doctor") && role !== "DOCTOR" && !(isApplicantRole && applicantRoute)) return NextResponse.redirect(new URL("/", request.url));
     if (isPublicRoute(pathname)) {
       return NextResponse.redirect(new URL(destinationForRole(role), request.url));
     }
@@ -47,4 +51,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: ["/admin/:path*", "/user/:path*", "/patient/:path*", "/doctor/:path*", "/login", "/register", "/verify-email", "/forgot-password/:path*", "/reset-password", "/change-password"] };
+export const config = { matcher: ["/admin/:path*", "/user/:path*", "/patient/:path*", "/doctor/:path*", "/payments/:path*", "/login", "/register", "/verify-email", "/forgot-password/:path*", "/reset-password", "/change-password"] };

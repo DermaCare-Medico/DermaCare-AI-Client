@@ -9,7 +9,23 @@ export interface CheckoutData {
   [key: string]: unknown;
 }
 
+export interface PaymentRecord {
+  id?: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  paidAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  transactionId?: string;
+  paymentIntentId?: string;
+  stripePaymentIntentId?: string;
+  [key: string]: unknown;
+}
+
 export interface PaymentStatus {
+  isPaid?: boolean;
+  payment?: PaymentRecord | null;
   status?: string;
   paymentStatus?: string;
   paid?: boolean;
@@ -53,6 +69,7 @@ export const paymentApi = baseApi.injectEndpoints({
 export const {
   useCreateAppointmentCheckoutMutation,
   useGetAppointmentPaymentStatusQuery,
+  useLazyGetAppointmentPaymentStatusQuery,
   useCreateOrderCheckoutMutation,
   useGetOrderPaymentStatusQuery,
 } = paymentApi;

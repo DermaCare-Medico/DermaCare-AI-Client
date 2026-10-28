@@ -1,4 +1,32 @@
-import { baseApi } from "./baseApi";
+import { baseApi } from "@/redux/api/baseApi";
+
+export function unwrapAdminPayload(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  return "data" in record ? record.data : value;
+}
+
+export function adminCollection(value: unknown, keys: string[]): Record<string, unknown>[] {
+  let current = unwrapAdminPayload(value);
+  if (typeof current === "object" && current !== null && !Array.isArray(current)) {
+    const record = current as Record<string, unknown>;
+    const key = [...keys, "items", "results", "data"].find((candidate) => Array.isArray(record[candidate]));
+    if (key) current = record[key];
+  }
+  return Array.isArray(current)
+    ? current.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    : [];
+}
+
+export function adminCollectionTotal(value: unknown, fallback: number): number {
+  const current = unwrapAdminPayload(value);
+  if (typeof current !== "object" || current === null || Array.isArray(current)) return fallback;
+  const record = current as Record<string, unknown>;
+  const pagination = (record.pagination ?? record.meta) as Record<string, unknown> | undefined;
+  const candidate = record.total ?? record.totalCount ?? record.count ?? pagination?.total ?? pagination?.totalCount;
+  const total = Number(candidate);
+  return Number.isFinite(total) && total >= 0 ? total : fallback;
+}
 
 export interface PaginationParams {
   page?: number;

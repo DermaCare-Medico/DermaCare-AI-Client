@@ -22,19 +22,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { DataState } from "@/components/shared/DataState";
-import { DemoNotice } from "@/components/shared/DemoNotice";
 import { PageHeader } from "@/components/doctor/PageHeader";
 
 import {
   useCreateDoctorSlotMutation,
   useDeleteDoctorSlotMutation,
+  useGetOwnDoctorSlotsQuery,
   useUpdateDoctorSlotMutation,
 } from "@/redux/api/doctorApi";
-import { useDoctorSlots } from "@/src/hooks/useDoctorModule";
-import { useAppSelector } from "@/redux/hooks";
-import { useDecodedToken } from "@/src/hooks/useDecodedToken";
-import { formatCurrency, formatDateTime, getApiErrorMessage } from "@/lib/doctor/utils";
-import type { DoctorSlot } from "@/types/doctor";
+import { formatDateTime, getApiErrorMessage } from "@/lib/doctor/utils";
+import { extractList, unwrapEnvelope, type DoctorSlot } from "@/types/doctor";
 
 /** Converts an ISO string into the `datetime-local` input value. */
 function toLocalInput(iso?: string): string {
@@ -47,6 +44,22 @@ function toLocalInput(iso?: string): string {
   )}:${pad(d.getMinutes())}`;
 }
 
+function validRange(start: string, end: string): boolean {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  return Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+}
+
+function slotError(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && (error as { status?: number }).status === 409) {
+    const message = getApiErrorMessage(error, "");
+    return message
+      ? `This slot conflicts with existing availability. ${message}`
+      : "This time overlaps an existing availability slot. Choose a different time.";
+  }
+  return getApiErrorMessage(error, fallback);
+}
+
 const slotStatusMeta: Record<string, string> = {
   AVAILABLE: "bg-emerald-100 text-emerald-800",
   HELD: "bg-amber-100 text-amber-800",
@@ -54,18 +67,17 @@ const slotStatusMeta: Record<string, string> = {
 };
 
 export default function DoctorAvailabilityPage() {
-  const token = useAppSelector((state) => state.auth.token);
-  const decoded = useDecodedToken(token);
-  const doctorId = typeof decoded?.id === "string" ? decoded.id : undefined;
-
-  const { slots, isDemo, isLoading, isError, error, refetch } =
-    useDoctorSlots(doctorId);
+  const slotsQuery = useGetOwnDoctorSlotsQuery();
+  const slots = useMemo(
+    () => extractList<DoctorSlot>(unwrapEnvelope(slotsQuery.data)),
+    [slotsQuery.data]
+  );
 
   const [createSlot, createState] = useCreateDoctorSlotMutation();
   const [updateSlot, updateState] = useUpdateDoctorSlotMutation();
   const [deleteSlot, deleteState] = useDeleteDoctorSlotMutation();
 
-  const [draft, setDraft] = useState({ start: "", end: "", fee: "" });
+  const [draft, setDraft] = useState({ start: "", end: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState({ start: "", end: "" });
 
@@ -84,7 +96,7 @@ export default function DoctorAvailabilityPage() {
       toast.error("Please choose a start and end time.");
       return;
     }
-    if (new Date(draft.end) <= new Date(draft.start)) {
+    if (!validRange(draft.start, draft.end)) {
       toast.error("The end time must be after the start time.");
       return;
     }
@@ -93,17 +105,20 @@ export default function DoctorAvailabilityPage() {
       await createSlot({
         startTime: new Date(draft.start).toISOString(),
         endTime: new Date(draft.end).toISOString(),
-        fee: draft.fee ? Number(draft.fee) : undefined,
       }).unwrap();
       toast.success("Availability slot added.");
-      setDraft({ start: "", end: "", fee: "" });
+      setDraft({ start: "", end: "" });
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Could not create the slot."));
+      toast.error(slotError(err, "Could not create the slot."));
     }
   }
 
   async function handleUpdate(slot: DoctorSlot) {
     if (!slot.startTime || !editDraft.start || !editDraft.end) return;
+    if (!validRange(editDraft.start, editDraft.end)) {
+      toast.error("The end time must be after the start time.");
+      return;
+    }
     try {
       await updateSlot({
         id: slot.id,
@@ -113,7 +128,7 @@ export default function DoctorAvailabilityPage() {
       toast.success("Slot updated.");
       setEditingId(null);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Could not update the slot."));
+      toast.error(slotError(err, "Could not update the slot."));
     }
   }
 
@@ -133,8 +148,6 @@ export default function DoctorAvailabilityPage() {
         title="Consultation slots"
         description="Publish the times patients can book. Booked or held slots cannot be edited."
       />
-
-      {isDemo && <DemoNotice className="mb-6" />}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.6fr]">
         {/* Add slot */}
@@ -165,17 +178,6 @@ export default function DoctorAvailabilityPage() {
                   onChange={(e) => setDraft((d) => ({ ...d, end: e.target.value }))}
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="slot-fee">Fee (USD, optional)</Label>
-                <Input
-                  id="slot-fee"
-                  type="number"
-                  min={0}
-                  value={draft.fee}
-                  onChange={(e) => setDraft((d) => ({ ...d, fee: e.target.value }))}
-                  placeholder="75"
-                />
-              </div>
               <Button
                 type="submit"
                 disabled={createState.isLoading}
@@ -202,13 +204,13 @@ export default function DoctorAvailabilityPage() {
           </CardHeader>
           <CardContent>
             <DataState
-              isLoading={isLoading}
-              isError={isError}
-              error={error}
+              isLoading={slotsQuery.isLoading}
+              isError={slotsQuery.isError}
+              error={slotsQuery.error}
               isEmpty={sorted.length === 0}
               emptyTitle="No slots published"
               emptyMessage="Add your first availability slot so patients can book a consultation."
-              onRetry={refetch}
+              onRetry={slotsQuery.refetch}
             >
               <div className="space-y-3">
                 {sorted.map((slot) => {
@@ -263,7 +265,6 @@ export default function DoctorAvailabilityPage() {
                             </p>
                             <p className="text-xs text-slate-400">
                               to {formatDateTime(slot.endTime)}
-                              {slot.fee !== undefined ? ` · ${formatCurrency(slot.fee)}` : ""}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">

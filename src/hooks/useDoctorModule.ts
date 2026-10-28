@@ -32,7 +32,6 @@ import {
 import type {
   AppointmentDetail,
   AppointmentStatus,
-  DoctorProfile,
   DoctorSlot,
   Medication,
   PreConsultation,
@@ -48,8 +47,12 @@ import type {
  * the UI can show a visible demo notice.
  */
 
-export function useDoctorAppointments(status?: AppointmentStatus) {
-  const query = useGetAppointmentsQuery(status ? { status } : undefined);
+export function useDoctorAppointments(
+  status?: AppointmentStatus,
+  page = 1,
+  limit = 10
+) {
+  const query = useGetAppointmentsQuery({ status, page, limit });
   const live = useMemo(
     () => normalizeAppointments(unwrapEnvelope(query.data)),
     [query.data]
@@ -62,6 +65,7 @@ export function useDoctorAppointments(status?: AppointmentStatus) {
 
   return {
     appointments,
+    pagination: query.data?.pagination,
     isDemo,
     isLoading: query.isLoading,
     isFetching: query.isFetching,

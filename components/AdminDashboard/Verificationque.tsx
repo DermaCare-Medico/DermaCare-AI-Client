@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { Check, Clock3, Search, ShieldCheck, X, AlertCircle, Loader2 } from "lucide-react";
 import {
+  adminCollection,
+  adminCollectionTotal,
   useGetAdminDoctorApprovalsQuery,
   useApproveDoctorApplicationMutation,
   useRejectDoctorApplicationMutation,
@@ -17,27 +19,11 @@ export default function Verificationque() {
   const [rejectingItem, setRejectingItem] = useState<Record<string, unknown> | null>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const { data, isLoading, isError, refetch } = useGetAdminDoctorApprovalsQuery();
+  const { data, isLoading, isFetching, isError, refetch } = useGetAdminDoctorApprovalsQuery();
   const [approveDoctor, { isLoading: isApproving }] = useApproveDoctorApplicationMutation();
   const [rejectDoctor, { isLoading: isRejecting }] = useRejectDoctorApplicationMutation();
 
-  const rawApprovals = data?.data ?? data;
-  const approvalsList: Record<string, unknown>[] = useMemo(() => {
-    if (Array.isArray(rawApprovals)) {
-      return rawApprovals.filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null);
-    }
-    if (rawApprovals && typeof rawApprovals === "object") {
-      const itemsProp = (rawApprovals as Record<string, unknown>).items;
-      if (Array.isArray(itemsProp)) {
-        return itemsProp.filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null);
-      }
-      const appProp = (rawApprovals as Record<string, unknown>).approvals;
-      if (Array.isArray(appProp)) {
-        return appProp.filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null);
-      }
-    }
-    return [];
-  }, [rawApprovals]);
+  const approvalsList = useMemo(() => adminCollection(data, ["approvals", "applications"]), [data]);
 
   const visibleApplications = useMemo(
     () =>
@@ -54,7 +40,8 @@ export default function Verificationque() {
     [approvalsList, query],
   );
 
-  const pendingCount = approvalsList.length;
+  const pendingCount = adminCollectionTotal(data, approvalsList.length);
+  const initialLoading = isLoading && !data;
 
   const handleApprove = async (app: Record<string, unknown>) => {
     const id = String(app.id ?? app._id);
@@ -108,7 +95,7 @@ export default function Verificationque() {
         </div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
           <Clock3 size={15} />
-          {isLoading ? "..." : pendingCount} awaiting review
+          {initialLoading ? "…" : pendingCount} awaiting review
         </span>
       </section>
 
@@ -136,7 +123,7 @@ export default function Verificationque() {
             </span>
           </div>
           <p className="mt-3 text-3xl font-semibold tracking-tight text-[#163A5F]">
-            {isLoading ? "..." : pendingCount}
+            {initialLoading ? "…" : pendingCount}
           </p>
           <p className="mt-1 text-xs text-slate-400">Applications pending validation</p>
         </article>
@@ -162,7 +149,7 @@ export default function Verificationque() {
               Pending Clinician Applications
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Review submitted credentials, license details, and take action.
+              {isFetching && !initialLoading ? "Refreshing applications…" : "Review submitted credentials, license details, and take action."}
             </p>
           </div>
           <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-slate-400 focus-within:border-[#0F888D]">
@@ -178,7 +165,7 @@ export default function Verificationque() {
         </div>
 
         <div className="overflow-x-auto">
-          {isLoading ? (
+          {initialLoading ? (
             <div className="grid min-h-[180px] place-items-center">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 size={18} className="animate-spin text-[#0F888D]" />

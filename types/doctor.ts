@@ -20,6 +20,7 @@ export interface ApiEnvelope<T> {
   success: boolean;
   message?: string;
   data: T;
+  pagination?: Pagination;
 }
 
 export interface ApiErrorEnvelope {
@@ -48,9 +49,13 @@ export interface Pagination {
  * `SCHEDULED -> CANCELLATION_REQUESTED -> CANCELLED`, and direct `CANCELLED`.
  */
 export type AppointmentStatus =
+  | "PENDING"
+  | "CONFIRMED"
   | "SCHEDULED"
   | "IN_PROGRESS"
   | "COMPLETED"
+  | "REJECTED"
+  | "NO_SHOW"
   | "CANCELLED"
   | "CANCELLATION_REQUESTED";
 
@@ -63,6 +68,11 @@ export interface AppointmentSummary {
   scheduledTime: string;
   doctorName?: string;
   patientName?: string;
+  slot?: {
+    id?: string;
+    startTime?: string;
+    endTime?: string;
+  };
 }
 
 export interface AppointmentDetail extends AppointmentSummary {
@@ -187,6 +197,8 @@ export interface DoctorProfile {
   isFeatured?: boolean;
   verificationStatus?: VerificationStatus;
   licenseStatus?: VerificationStatus;
+  approvalStatus?: VerificationStatus;
+  approval_status?: VerificationStatus;
   licenseNumber?: string;
   user?: {
     id?: string;
@@ -247,10 +259,12 @@ export interface DoctorLicenseSubmission {
 
 export interface PrescriptionItem {
   id?: string;
+  medicineId?: string;
   medicineName: string;
   dosage: string;
   frequency: string;
-  durationDays: number;
+  duration?: string;
+  durationDays?: number;
   instructions?: string;
 }
 
@@ -509,6 +523,9 @@ export function normalizeAppointment(raw: unknown): AppointmentSummary | null {
 
   const nestedDoctor = asRecord(record.doctor);
   const nestedPatient = asRecord(record.patient);
+  const patientUser = asRecord(nestedPatient?.user);
+  const nestedSlot = asRecord(record.slot);
+  const slotStart = str(nestedSlot?.startTime) ?? str(nestedSlot?.startAt);
 
   return {
     appointmentId: id,
@@ -516,9 +533,19 @@ export function normalizeAppointment(raw: unknown): AppointmentSummary | null {
     patientId: str(record.patientId) ?? str(nestedPatient?.id) ?? "",
     status: (str(record.status) as AppointmentStatus) ?? "SCHEDULED",
     scheduledTime:
-      str(record.scheduledTime) ?? str(record.scheduledAt) ?? "",
-    doctorName: str(record.doctorName) ?? str(nestedDoctor?.name),
-    patientName: str(record.patientName) ?? str(nestedPatient?.name),
+      str(record.scheduledTime) ?? str(record.scheduledAt) ?? slotStart ?? "",
+    doctorName:
+      str(record.doctorName) ?? str(nestedDoctor?.name) ??
+      str(asRecord(nestedDoctor?.user)?.name),
+    patientName:
+      str(record.patientName) ?? str(nestedPatient?.name) ?? str(patientUser?.name),
+    slot: nestedSlot
+      ? {
+          id: str(nestedSlot.id),
+          startTime: slotStart,
+          endTime: str(nestedSlot.endTime) ?? str(nestedSlot.endAt),
+        }
+      : undefined,
   };
 }
 
@@ -536,10 +563,12 @@ export function normalizeAppointmentDetail(
   if (!base) return null;
   const record = asRecord(payload) ?? {};
   const nestedPatient = asRecord(record.patient);
+  const patientUser = asRecord(nestedPatient?.user);
 
   return {
     ...base,
-    patientEmail: str(record.patientEmail) ?? str(nestedPatient?.email),
+    patientEmail:
+      str(record.patientEmail) ?? str(nestedPatient?.email) ?? str(patientUser?.email),
     consentRecorded:
       typeof record.consentRecorded === "boolean"
         ? record.consentRecorded
@@ -590,9 +619,13 @@ export function buildVideoUrl(video?: VideoAccess | null): string | undefined {
 
 /** Appointment statuses used across the UI, in display order. */
 export const APPOINTMENT_STATUSES: AppointmentStatus[] = [
+  "PENDING",
+  "CONFIRMED",
   "SCHEDULED",
   "IN_PROGRESS",
   "COMPLETED",
+  "REJECTED",
+  "NO_SHOW",
   "CANCELLATION_REQUESTED",
   "CANCELLED",
 ];

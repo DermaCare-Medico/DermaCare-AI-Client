@@ -35,6 +35,10 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import brandLogo from "@/src/favicon.ico";
+import { useGetMeQuery } from "@/redux/api/authApi";
+import { useGetOwnDoctorProfileQuery } from "@/redux/api/doctorApi";
+import { useAppSelector } from "@/redux/hooks";
+import { readIdentity } from "@/lib/doctor/identity";
 
 const data = {
   user: {
@@ -228,16 +232,49 @@ export default function AppSidebar({
 }: {
   role: string;
 }) {
-  const normalizedRole = role.toLowerCase();
+  const token = useAppSelector((state) => state.auth.token);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const identityQuery = useGetMeQuery(undefined, { skip: !token });
+  const profileQuery = useGetOwnDoctorProfileQuery(undefined, { skip: !token });
+  const identity = readIdentity(identityQuery.data);
+  const profile = readIdentity(profileQuery.data);
+  const effectiveRole = (identity.role ?? role).toLowerCase();
+  const approvalStatus = profile.status;
+  const approvalLoading = Boolean(token) && profileQuery.isLoading;
+  const isDoctorApplicant =
+    effectiveRole === "doctor" ||
+    Boolean(authUser?.isDoctorApplicant) ||
+    Boolean(approvalStatus);
+
+  const doctorNavigation = data.doctor.navMain.filter((item) => {
+    if (approvalLoading) return item.url === "/";
+    if (approvalStatus === "APPROVED") {
+      return !["/doctor/application", "/doctor/pending-approval"].includes(item.url);
+    }
+    if (approvalStatus === "PENDING_REVIEW") {
+      return ["/doctor/profile", "/doctor/pending-approval", "/"].includes(item.url);
+    }
+    if (approvalStatus === "REJECTED" || approvalStatus === "NOT_SUBMITTED") {
+      return ["/doctor/profile", "/doctor/application", "/doctor/pending-approval", "/"].includes(item.url);
+    }
+    return item.url !== "/doctor/pending-approval";
+  });
+
+  const applicantNavigation = [
+    ...(effectiveRole === "patient" ? data.patient.navMain : data.user.navMain),
+    ...(isDoctorApplicant
+      ? doctorNavigation.filter((item) =>
+          ["/doctor/application", "/doctor/pending-approval"].includes(item.url)
+        )
+      : []),
+  ];
 
   const navigation =
-    normalizedRole === "admin"
+    effectiveRole === "admin"
       ? data.admin.navMain
-      : normalizedRole === "patient"
-        ? data.patient.navMain
-        : normalizedRole === "doctor"
-          ? data.doctor.navMain
-          : data.user.navMain;
+      : effectiveRole === "doctor"
+        ? doctorNavigation
+        : applicantNavigation;
 
   return (
     <Sidebar
