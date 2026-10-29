@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CheckCircle2, Phone, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Mail, ShieldCheck } from "lucide-react";
 import { Button, ButtonArrow } from "@/components/ui/button";
 import img1 from "../../../public/images/doctor.jpg"
 import img2 from "../../../public/images/doctor1.jpg"
@@ -86,18 +86,27 @@ export default function WhoWeAreSection() {
               <Link href="/#how-it-works">Learn How It Works <ButtonArrow /></Link>
             </Button>
 
-            {/* Support / Emergency Help Block */}
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-[#163A5F] text-white flex items-center justify-center shadow-sm">
-                <Phone className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-bold text-[#0F2942] tracking-wide">
-                  +1 (800) 555-DERMA
-                </span>
-                <span className="text-[11px] text-[#64748B]">24/7 Patient Support Line</span>
-              </div>
-            </div>
+          
+{/* Support / Contact Block */}
+<div className="flex items-center gap-3">
+  <div className="w-11 h-11 rounded-full bg-[#163A5F] text-white flex items-center justify-center shadow-sm">
+    <Mail className="w-5 h-5" />
+  </div>
+
+  <div className="flex flex-col">
+    <a
+      href="mailto:support@yourdomain.com"
+      className="text-sm sm:text-base font-bold text-[#0F2942] tracking-wide hover:text-[#0F888D] transition-colors"
+    >
+      support@yourdomain.com
+    </a>
+
+    <span className="text-[11px] text-[#64748B]">
+      Contact Our Support Team
+    </span>
+  </div>
+</div>
+
           </div>
 
         </div>
