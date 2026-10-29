@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import { Search, ShoppingBag } from "lucide-react";
 
 import { MedicineCard } from "@/components/public/MedicineCard";
+import AddToCartModal from "@/components/public/AddToCartModal";
+import CartSheet from "@/components/shared/CartSheet";
 import { DataState } from "@/components/shared/DataState";
 import { DemoNotice } from "@/components/shared/DemoNotice";
 import { useStoreMedicines } from "@/src/hooks/usePublicCatalog";
+import type { Medicine } from "@/types/doctor";
 
 type RxFilter = "ALL" | "OTC" | "RX";
 
@@ -16,13 +19,18 @@ export default function StorePage() {
   const [category, setCategory] = useState<string | undefined>(undefined);
   const [rxFilter, setRxFilter] = useState<RxFilter>("ALL");
 
+  // Modal / drawer state
+  const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
   const args = useMemo(
     () => ({
       search: appliedSearch || undefined,
       category,
       requiresPrescription:
         rxFilter === "RX" ? true : rxFilter === "OTC" ? false : undefined,
-      limit: 24,
+      limit: 30,
     }),
     [appliedSearch, category, rxFilter]
   );
@@ -30,7 +38,7 @@ export default function StorePage() {
   const { medicines, isDemo, isLoading, isError, error, refetch } =
     useStoreMedicines(args);
 
-  // Categories derived from the returned catalog (works for live + demo data).
+  // Categories derived from the returned catalog
   const categories = useMemo(
     () =>
       Array.from(
@@ -41,13 +49,27 @@ export default function StorePage() {
     [medicines]
   );
 
+  const handleOpenAddToCart = (med: Medicine) => {
+    setSelectedMedicine(med);
+    setIsAddModalOpen(true);
+  };
+
   return (
     <section className="min-h-screen bg-[#F7F9FC] px-4 py-16 font-sans text-[#172033] sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-10">
         <header className="flex flex-col gap-2">
-          <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#0F888D]/10 px-3 py-1 text-xs font-semibold text-[#0F888D]">
-            <ShoppingBag className="h-3.5 w-3.5" />
-            DermaCare Store
+          <div className="flex items-center justify-between">
+            <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#0F888D]/10 px-3 py-1 text-xs font-semibold text-[#0F888D]">
+              <ShoppingBag className="h-3.5 w-3.5" />
+              DermaCare Store
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsCartOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-[#0F888D] shadow-sm hover:bg-slate-50"
+            >
+              <ShoppingBag className="size-3.5" /> View Cart
+            </button>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-[#102d31] sm:text-4xl">
             Explore DermaCare Store
@@ -172,17 +194,24 @@ export default function StorePage() {
               <MedicineCard
                 key={medicine.id}
                 medicine={medicine}
-                detailsHref={isDemo ? `/store/${medicine.id}` : undefined}
+                detailsHref={`/store/${medicine.id}`}
+                onAddToCart={handleOpenAddToCart}
               />
             ))}
           </div>
         </DataState>
-
-        {/* <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
-          Educational prototype: orders and payments are simulated. No real
-          medicine is sold and no real money is charged.
-        </p> */}
       </div>
+
+      {/* Add To Cart Dialog */}
+      <AddToCartModal
+        medicine={selectedMedicine}
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onSuccess={() => setIsCartOpen(true)}
+      />
+
+      {/* Cart Drawer */}
+      <CartSheet open={isCartOpen} onOpenChange={setIsCartOpen} />
     </section>
   );
 }

@@ -72,4 +72,5 @@ export const {
   useLazyGetAppointmentPaymentStatusQuery,
   useCreateOrderCheckoutMutation,
   useGetOrderPaymentStatusQuery,
+  useLazyGetOrderPaymentStatusQuery,
 } = paymentApi;

@@ -3,19 +3,23 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useSyncExternalStore } from "react";
-import { ArrowLeft, LogIn, Menu, UserPlus, X } from "lucide-react";
+import { ArrowLeft, LogIn, Menu, ShoppingBag, UserPlus, X } from "lucide-react";
 import brandLogo from "@/src/favicon.ico";
 import styles from "./Navbar.module.css";
 import { Button } from "@/components/ui/button";
 import { useAppSelector } from "@/redux/hooks";
 import { NavUser } from "@/components/shared/nav-user";
+import CartSheet from "@/components/shared/CartSheet";
+import { useGetCartQuery } from "@/redux/api/orderApi";
 
 const emptySubscribe = () => () => {};
 
 const Navbar = ({ variant = "default" }: { variant?: "default" | "minimal" }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const token = useAppSelector((state) => state.auth.token);
+  const user = useAppSelector((state) => state.auth.user);
   const isHydrated = useSyncExternalStore(
     emptySubscribe,
     () => true,
@@ -23,6 +27,12 @@ const Navbar = ({ variant = "default" }: { variant?: "default" | "minimal" }) =>
   );
 
   const isAuthenticated = isHydrated && Boolean(token);
+  const isPatient = user?.role === "PATIENT";
+
+  const { data: cartData } = useGetCartQuery(undefined, {
+    skip: !isAuthenticated || !isPatient,
+  });
+  const cartItemCount = cartData?.data?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
 
   const links = [
     { label: "Home", href: "/#home" },
@@ -97,6 +107,22 @@ const Navbar = ({ variant = "default" }: { variant?: "default" | "minimal" }) =>
           </div>
 
           <div className={styles.actions}>
+            {isAuthenticated && isPatient && (
+              <button
+                type="button"
+                onClick={() => setCartOpen(true)}
+                className="relative inline-flex items-center justify-center rounded-full p-2 text-slate-700 hover:bg-slate-100 hover:text-[#0F888D] transition-colors"
+                aria-label={`Shopping cart with ${cartItemCount} items`}
+              >
+                <ShoppingBag size={20} />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0F888D] px-1 text-[10px] font-bold text-white">
+                    {cartItemCount > 99 ? "99+" : cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             {!isHydrated ? (
               <div
                 className={`${styles.authActions} size-10 rounded-full bg-slate-100/70 animate-pulse justify-self-end`}
@@ -132,6 +158,8 @@ const Navbar = ({ variant = "default" }: { variant?: "default" | "minimal" }) =>
           </div>
         </nav>
       </div>
+
+      <CartSheet open={cartOpen} onOpenChange={setCartOpen} />
     </header>
   );
 };

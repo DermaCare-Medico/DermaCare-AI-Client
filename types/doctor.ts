@@ -37,6 +37,7 @@ export interface Pagination {
   totalCount?: number;
   totalPages?: number;
   total?: number;
+  confirmedTotal?: number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -344,14 +345,16 @@ export interface Medicine {
   dosageForm?: string;
   packSize?: string;
   category?: string;
-  price?: number;
+  price?: number | string;
   currency?: string;
   requiresPrescription?: boolean;
   inStock?: boolean;
   stockQuantity?: number;
+  description?: string;
   contraindications?: string[];
   storageInstructions?: string;
   manufacturer?: string;
+  [key: string]: unknown;
 }
 
 /* ------------------------------------------------------------------ */

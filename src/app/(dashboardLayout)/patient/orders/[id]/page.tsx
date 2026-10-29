@@ -1,17 +1,22 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, CreditCard, ExternalLink, Loader2, MapPin, Package, Truck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { PageState, PatientPageHeader, StatusPill, patientUiStyles as s } from "@/src/app/(dashboardLayout)/patient/_components/PatientUi";
+import { baseApi } from "@/redux/api/baseApi";
+import { useAppDispatch } from "@/redux/hooks";
 import { useGetPatientOrderByIdQuery } from "@/redux/api/orderApi";
-import { useCreateOrderCheckoutMutation, useGetOrderPaymentStatusQuery } from "@/redux/api/paymentApi";
+import { useCreateOrderCheckoutMutation, useGetOrderPaymentStatusQuery, useLazyGetOrderPaymentStatusQuery, type PaymentStatus } from "@/redux/api/paymentApi";
+import { formatMoney } from "@/lib/api/format";
 
 const fulfillmentSteps = ["Order received", "Processing", "Packed", "Out for delivery", "Delivered"];
 const statusProgress: Record<string, number> = {
+  Confirmed: 1,
   Pending: 1,
   Processing: 2,
   Packed: 3,
@@ -20,13 +25,69 @@ const statusProgress: Record<string, number> = {
   Cancelled: 1,
 };
 
+const MAX_PAYMENT_CHECKS = 10;
+const PAYMENT_CHECK_DELAY = 2500;
+const normalize = (value: unknown) => typeof value === "string" ? value.trim().toUpperCase() : "";
+
 export default function OrderDetailsPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
   const id = decodeURIComponent(params.id || "");
 
-  const { data: rawData, isLoading, isError, refetch } = useGetPatientOrderByIdQuery(id, { skip: !id });
-  const { data: paymentStatusData } = useGetOrderPaymentStatusQuery(id, { skip: !id });
+  const { data: rawData, isLoading, isError, refetch } = useGetPatientOrderByIdQuery(id, { skip: !id, refetchOnMountOrArgChange: true });
+  const { data: paymentStatusData, isFetching: isPaymentFetching, refetch: refetchPayment } = useGetOrderPaymentStatusQuery(id, { skip: !id, refetchOnMountOrArgChange: true });
+  const [verifyPayment] = useLazyGetOrderPaymentStatusQuery();
   const [createCheckout, { isLoading: isCheckingOut }] = useCreateOrderCheckoutMutation();
+  const [returnState, setReturnState] = useState<"idle" | "verifying" | "delayed" | "failed" | "cancelled">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const runId = useRef(0);
+
+  const paymentReturn = searchParams.get("payment");
+  const returnContext = searchParams.get("context");
+  const returnOrderId = searchParams.get("orderId");
+  const returnSessionId = searchParams.get("session_id");
+  const validSuccessReturn = paymentReturn === "success" && returnContext === "order" && returnOrderId === id && Boolean(returnSessionId?.startsWith("cs_") && returnSessionId.length <= 500);
+  const validCancelledReturn = paymentReturn === "cancelled" && returnContext === "order" && returnOrderId === id;
+
+  const pollPayment = useCallback(async () => {
+    if (!id || !validSuccessReturn) return;
+    const currentRun = ++runId.current;
+    setReturnState("verifying");
+    for (let attempt = 1; attempt <= MAX_PAYMENT_CHECKS; attempt += 1) {
+      try {
+        const response = await verifyPayment(id, false).unwrap();
+        if (currentRun !== runId.current) return;
+        const data = response.data;
+        const backendStatus = normalize(data.payment?.status ?? data.paymentStatus ?? data.status);
+        if (data.isPaid === true && backendStatus === "PAID") {
+          sessionStorage.removeItem("dermacare.checkout.pendingOrderId");
+          sessionStorage.removeItem("dermacare.checkout.idempotencyKey");
+          dispatch(baseApi.util.invalidateTags(["Cart", "Orders", "Payment"]));
+          await Promise.all([refetch(), refetchPayment()]);
+          router.replace(`/patient/orders/${encodeURIComponent(id)}`);
+          return;
+        }
+        if (["FAILED", "CANCELLED"].includes(backendStatus)) { setReturnState("failed"); return; }
+      } catch {
+        if (currentRun !== runId.current) return;
+        if (attempt === 1) { setReturnState("failed"); return; }
+      }
+      if (attempt < MAX_PAYMENT_CHECKS) {
+        await new Promise<void>((resolve) => { timer.current = setTimeout(resolve, PAYMENT_CHECK_DELAY); });
+        if (currentRun !== runId.current) return;
+      }
+    }
+    if (currentRun === runId.current) setReturnState("delayed");
+  }, [dispatch, id, refetch, refetchPayment, router, validSuccessReturn, verifyPayment]);
+
+  useEffect(() => {
+    if (validCancelledReturn) { timer.current = setTimeout(() => setReturnState("cancelled"), 0); return () => { if (timer.current) clearTimeout(timer.current); }; }
+    if (!validSuccessReturn) return;
+    timer.current = setTimeout(() => void pollPayment(), 0);
+    return () => { runId.current += 1; if (timer.current) clearTimeout(timer.current); };
+  }, [pollPayment, validCancelledReturn, validSuccessReturn]);
 
   const apiData = (rawData as { data?: Record<string, unknown> })?.data ?? (rawData as unknown as Record<string, unknown>);
   const hasApi = Boolean(apiData && (apiData.id || apiData.orderId));
@@ -62,17 +123,19 @@ export default function OrderDetailsPage() {
 
   const rawStatus = String(apiData.status || "PENDING").toLowerCase();
   let normStatus = "Pending";
-  if (rawStatus.includes("deliv")) normStatus = "Delivered";
+  if (rawStatus.includes("confirm")) normStatus = "Confirmed";
+  else if (rawStatus.includes("deliv")) normStatus = "Delivered";
   else if (rawStatus.includes("cancel")) normStatus = "Cancelled";
   else if (rawStatus.includes("out")) normStatus = "Out for delivery";
   else if (rawStatus.includes("pack")) normStatus = "Packed";
   else if (rawStatus.includes("proc")) normStatus = "Processing";
 
-  const paymentDataObj = (paymentStatusData as { data?: Record<string, unknown> })?.data;
-  const rawPay = String(paymentDataObj?.paymentStatus || apiData.paymentStatus || "PENDING").toLowerCase();
-  let normPay: "Paid" | "Pending" | "Refunded" = "Pending";
-  if (rawPay.includes("paid") || rawPay.includes("success")) normPay = "Paid";
-  else if (rawPay.includes("refund")) normPay = "Refunded";
+  const paymentDataObj = paymentStatusData?.data as PaymentStatus | undefined;
+  const appointmentPay = normalize(apiData.paymentStatus);
+  const endpointPay = normalize(paymentDataObj?.payment?.status ?? paymentDataObj?.paymentStatus ?? paymentDataObj?.status);
+  const backendPaid = apiData.isPaid === true || paymentDataObj?.isPaid === true;
+  const rawPay = backendPaid && (appointmentPay === "PAID" || endpointPay === "PAID") ? "PAID" : endpointPay || appointmentPay || "PENDING";
+  const normPay: "PAID" | "PENDING" | "FAILED" | "CANCELLED" | "REFUNDED" = ["PAID", "FAILED", "CANCELLED", "REFUNDED"].includes(rawPay) ? rawPay as "PAID" | "FAILED" | "CANCELLED" | "REFUNDED" : "PENDING";
 
   const rawItems = Array.isArray(apiData.items) ? apiData.items : [];
   const subtotalNum = Number(apiData.subtotal || 0);
@@ -84,9 +147,9 @@ export default function OrderDetailsPage() {
     placedOn: apiData.createdAt ? new Date(String(apiData.createdAt)).toLocaleDateString() : "Recently",
     status: normStatus,
     paymentStatus: normPay,
-    subtotal: `$${subtotalNum.toFixed(2)}`,
-    deliveryFee: `$${deliveryFeeNum.toFixed(2)}`,
-    total: `$${totalNum.toFixed(2)}`,
+    subtotal: formatMoney(subtotalNum, "BDT"),
+    deliveryFee: formatMoney(deliveryFeeNum, "BDT"),
+    total: formatMoney(totalNum, "BDT"),
     deliveryAddress: String(apiData.deliveryAddress || "Address provided during checkout"),
     estimatedDelivery: String(apiData.estimatedDelivery || "Standard 2-3 business days"),
     prescriptionId: apiData.prescriptionId ? String(apiData.prescriptionId) : undefined,
@@ -97,19 +160,22 @@ export default function OrderDetailsPage() {
         name: String(item.medicineName || item.name || "Medicine"),
         strength: String(item.strength || ""),
         quantity: qty,
-        unitPrice: `$${unitPrice.toFixed(2)}`,
-        lineTotal: `$${(unitPrice * qty).toFixed(2)}`,
+        unitPrice: formatMoney(unitPrice, "BDT"),
+        lineTotal: formatMoney(unitPrice * qty, "BDT"),
       };
     }),
   };
 
   const handlePayNow = async () => {
+    if (isCheckingOut || normPay === "PAID" || !["PENDING", "FAILED", "CANCELLED"].includes(normPay) || ["confirmed", "cancelled"].includes(rawStatus)) return;
     try {
       const res = await createCheckout(order.id).unwrap();
       const body = (res as { data?: { url?: string; checkoutUrl?: string } })?.data ?? (res as { url?: string; checkoutUrl?: string });
       const targetUrl = body?.url || body?.checkoutUrl;
       if (targetUrl) {
-        window.location.assign(targetUrl);
+        const destination = new URL(targetUrl);
+        if (destination.protocol !== "https:") throw new Error("Invalid checkout URL");
+        window.location.assign(destination.href);
       } else {
         toast.error("Could not obtain checkout session URL.");
       }
@@ -132,6 +198,12 @@ export default function OrderDetailsPage() {
           </Button>
         }
       />
+      {returnState !== "idle" ? <div className={s.previewNotice} role="status">
+        {returnState === "verifying" ? "Verifying payment with the backend..." : null}
+        {returnState === "delayed" ? <>Payment confirmation is taking longer than expected. The order remains pending until the backend confirms it. <button className="font-semibold underline" onClick={() => void pollPayment()}>Check again</button></> : null}
+        {returnState === "failed" ? <>Payment could not be confirmed. Review the status below and retry checkout if eligible.</> : null}
+        {returnState === "cancelled" ? "Stripe checkout was cancelled. No payment was recorded from the return URL." : null}
+      </div> : null}
       <div className={s.detailsLayout}>
         <div className={s.list}>
           <section className={s.panel}>
@@ -140,7 +212,7 @@ export default function OrderDetailsPage() {
                 <p className={s.eyebrow}>Fulfillment</p>
                 <h2>{order.id}</h2>
               </div>
-              <StatusPill tone={order.status === "Delivered" ? "success" : order.status === "Cancelled" ? "danger" : "info"}>
+              <StatusPill tone={order.status === "Delivered" || order.status === "Confirmed" ? "success" : order.status === "Cancelled" ? "danger" : "info"}>
                 {order.status}
               </StatusPill>
             </div>
@@ -229,23 +301,23 @@ export default function OrderDetailsPage() {
                 <strong>Total</strong>
                 <strong>{order.total}</strong>
               </div>
-              <StatusPill tone={order.paymentStatus === "Paid" ? "success" : order.paymentStatus === "Refunded" ? "info" : "warning"}>
+              <StatusPill tone={order.paymentStatus === "PAID" ? "success" : order.paymentStatus === "FAILED" || order.paymentStatus === "CANCELLED" ? "danger" : order.paymentStatus === "REFUNDED" ? "info" : "warning"}>
                 {order.paymentStatus}
               </StatusPill>
-              {order.paymentStatus === "Pending" && order.status !== "Cancelled" && (
-                <Button
-                  className={s.primaryButton}
-                  style={{ marginTop: 12 }}
-                  disabled={isCheckingOut}
-                  onClick={handlePayNow}
-                >
-                  {isCheckingOut ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ExternalLink size={16} style={{ marginRight: 6 }} />
-                  )}
-                  Pay with Stripe Checkout
-                </Button>
+              {["PENDING", "FAILED", "CANCELLED"].includes(order.paymentStatus) && order.status !== "Cancelled" && order.status !== "Confirmed" && (
+                  <Button
+                    className={s.primaryButton}
+                    style={{ marginTop: 12 }}
+                    disabled={isCheckingOut || isPaymentFetching || returnState === "verifying"}
+                    onClick={handlePayNow}
+                  >
+                    {isCheckingOut ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink size={16} style={{ marginRight: 6 }} />
+                    )}
+                    Pay with Stripe Checkout
+                  </Button>
               )}
             </div>
           </section>

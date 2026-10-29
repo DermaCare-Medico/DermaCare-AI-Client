@@ -10,6 +10,7 @@ import { useGetPatientOrdersQuery } from "@/redux/api/orderApi";
 
 type OrderStatus =
   | "Pending"
+  | "Confirmed"
   | "Processing"
   | "Packed"
   | "Out for delivery"
@@ -19,6 +20,7 @@ type OrderStatus =
 const statuses: Array<"All" | OrderStatus> = [
   "All",
   "Pending",
+  "Confirmed",
   "Processing",
   "Packed",
   "Out for delivery",
@@ -28,6 +30,8 @@ const statuses: Array<"All" | OrderStatus> = [
 
 const tone = (status: string) =>
   status === "Delivered"
+    ? "success"
+    : status === "Confirmed"
     ? "success"
     : status === "Cancelled"
     ? "danger"
@@ -51,6 +55,7 @@ export default function PatientOrdersPage() {
 
   const queryParams = status !== "All" ? { status: status.toUpperCase() } : undefined;
   const { data: rawData, isLoading, isError, refetch } = useGetPatientOrdersQuery(queryParams);
+  const confirmedTotal = rawData?.pagination?.confirmedTotal;
 
   const orders = useMemo<UnifiedOrder[]>(() => {
     if (!rawData) return [];
@@ -67,7 +72,8 @@ export default function PatientOrdersPage() {
     return list.map((order) => {
       const rawStatus = String(order.status || "PENDING").toLowerCase();
       let normStatus: OrderStatus = "Pending";
-      if (rawStatus.includes("deliv")) normStatus = "Delivered";
+      if (rawStatus.includes("confirm")) normStatus = "Confirmed";
+      else if (rawStatus.includes("deliv")) normStatus = "Delivered";
       else if (rawStatus.includes("cancel")) normStatus = "Cancelled";
       else if (rawStatus.includes("out")) normStatus = "Out for delivery";
       else if (rawStatus.includes("pack")) normStatus = "Packed";
@@ -75,7 +81,7 @@ export default function PatientOrdersPage() {
 
       const rawPay = String(order.paymentStatus || "PENDING").toLowerCase();
       let normPay: "Paid" | "Pending" | "Refunded" = "Pending";
-      if (rawPay.includes("paid") || rawPay.includes("success")) normPay = "Paid";
+      if (rawPay === "paid") normPay = "Paid";
       else if (rawPay.includes("refund")) normPay = "Refunded";
 
       const rawItems = Array.isArray(order.items) ? order.items : [];
@@ -86,7 +92,7 @@ export default function PatientOrdersPage() {
         placedOn: order.createdAt ? new Date(String(order.createdAt)).toLocaleDateString() : "Recently",
         status: normStatus,
         paymentStatus: normPay,
-        total: `$${totalAmount.toFixed(2)}`,
+        total: new Intl.NumberFormat(undefined, { style: "currency", currency: "BDT" }).format(totalAmount),
         estimatedDelivery: String(order.estimatedDelivery || "Standard 2-3 business days"),
         items: rawItems.map((item: Record<string, unknown>) => ({
           name: String(item.medicineName || item.name || "Medicine"),
@@ -109,7 +115,7 @@ export default function PatientOrdersPage() {
       <PatientPageHeader
         eyebrow="Pharmacy"
         title="Order history"
-        description="Track medicine orders, payment state, and delivery progress from one place."
+        description={`Track medicine orders, payment state, and delivery progress from one place.${typeof confirmedTotal === "number" ? ` ${confirmedTotal} completed ${confirmedTotal === 1 ? "purchase" : "purchases"}.` : ""}`}
         action={
           <Button asChild className={s.primaryButton}>
             <Link href="/store">Explore store</Link>

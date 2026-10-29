@@ -1,11 +1,25 @@
-import { Package, Pill, ShieldPlus } from "lucide-react";
+"use client";
+
+import { Package, Pill, ShieldPlus, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
 import { formatMoney } from "@/lib/api/format";
 import type { Medicine } from "@/types/doctor";
 
+interface MedicineCardProps {
+  medicine: Medicine;
+  detailsHref?: string;
+  onAddToCart?: (medicine: Medicine) => void;
+  isAdding?: boolean;
+}
+
 /** Public store catalog card. */
-export function MedicineCard({ medicine, detailsHref }: { medicine: Medicine; detailsHref?: string }) {
+export function MedicineCard({
+  medicine,
+  detailsHref = `/store/${medicine.id}`,
+  onAddToCart,
+  isAdding = false,
+}: MedicineCardProps) {
   const inStock = medicine.inStock ?? (medicine.stockQuantity ?? 0) > 0;
 
   return (
@@ -15,9 +29,11 @@ export function MedicineCard({ medicine, detailsHref }: { medicine: Medicine; de
           <Pill size={20} />
         </span>
         <div className="min-w-0">
-          <h3 className="truncate text-base font-bold text-[#102d31]">
-            {medicine.name}
-          </h3>
+          <Link href={detailsHref} className="hover:text-[#0F888D] transition-colors">
+            <h3 className="truncate text-base font-bold text-[#102d31]">
+              {medicine.name}
+            </h3>
+          </Link>
           <p className="truncate text-xs text-[#64748B]">
             {[medicine.genericName, medicine.strength && `${medicine.strength}`]
               .filter(Boolean)
@@ -70,17 +86,30 @@ export function MedicineCard({ medicine, detailsHref }: { medicine: Medicine; de
       <div className="flex items-center justify-between border-t border-[#E2E8F0] pt-3">
         <span className="text-xs text-[#64748B]">Price</span>
         <span className="text-lg font-bold text-[#0F2942]">
-          {formatMoney(medicine.price, medicine.currency ?? "USD")}
+          {formatMoney(medicine.price, medicine.currency ?? "BDT")}
         </span>
       </div>
-      {detailsHref && (
+
+      <div className="flex flex-col gap-2">
+        {onAddToCart ? (
+          <button
+            type="button"
+            disabled={!inStock || isAdding}
+            onClick={() => onAddToCart(medicine)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F888D] px-4 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-[#0c6b6f] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+          >
+            <ShoppingCart size={15} />
+            {isAdding ? "Adding…" : inStock ? "Add to Cart" : "Out of stock"}
+          </button>
+        ) : null}
+
         <Link
           href={detailsHref}
-          className="rounded-xl border border-[#0F888D] px-4 py-2 text-center text-sm font-semibold text-[#0F888D] transition-colors hover:bg-[#0F888D] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F888D] focus-visible:ring-offset-2"
+          className="rounded-xl border border-slate-200 px-4 py-2 text-center text-xs font-semibold text-slate-700 transition-colors hover:border-[#0F888D] hover:text-[#0F888D]"
         >
-          View medicine details
+          View details
         </Link>
-      )}
+      </div>
     </article>
   );
 }

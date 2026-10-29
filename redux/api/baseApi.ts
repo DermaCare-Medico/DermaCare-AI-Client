@@ -60,6 +60,6 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["User", "Events", "Identity", "PatientProfile", "Screenings", "Appointments", "Payment", "Prescriptions", "DoctorProfile", "DoctorSlots", "Conversation", "Doctors", "StoreMedicines", "Orders", "Notifications", "Earnings", "Payouts", "AdminDashboard", "AdminUsers", "AdminDoctors", "AdminDoctorApprovals", "AdminAppointments", "AdminMedicines", "AdminOrders", "AdminDoctorPayments", "AdminAuditLogs", "Auth"],
+  tagTypes: ["User", "Events", "Identity", "PatientProfile", "Screenings", "Appointments", "Payment", "Cart", "Prescriptions", "DoctorProfile", "DoctorSlots", "Conversation", "Doctors", "StoreMedicines", "Orders", "Notifications", "Earnings", "Payouts", "AdminDashboard", "AdminUsers", "AdminDoctors", "AdminDoctorApprovals", "AdminAppointments", "AdminMedicines", "AdminOrders", "AdminDoctorPayments", "AdminAuditLogs", "Auth"],
   endpoints: () => ({}),
 });
