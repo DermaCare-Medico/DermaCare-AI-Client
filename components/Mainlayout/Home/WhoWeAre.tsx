@@ -95,10 +95,10 @@ export default function WhoWeAreSection() {
 
   <div className="flex flex-col">
     <a
-      href="mailto:support@yourdomain.com"
+      href="mailto:dermacareaiteam@gmail.com"
       className="text-sm sm:text-base font-bold text-[#0F2942] tracking-wide hover:text-[#0F888D] transition-colors"
     >
-      support@yourdomain.com
+      dermacareaiteam@gmail.com
     </a>
 
     <span className="text-[11px] text-[#64748B]">
