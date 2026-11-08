@@ -1,24 +1,26 @@
 import Link from "next/link";
 import { ArrowRight, Mail, MessageCircle, ShieldCheck } from "lucide-react";
 
+const OFFICIAL_EMAIL = "dermacareaiteam@gmail.com";
+
 const CHANNELS = [
   {
     icon: MessageCircle,
     title: "Product & booking support",
     body: "Questions about screening, booking a consultation, or a prescription.",
-    action: "support@dermacare.ai",
+    action: OFFICIAL_EMAIL,
   },
   {
     icon: Mail,
     title: "Doctor verification",
     body: "Licensed clinicians with questions about joining the platform and verification.",
-    action: "doctors@dermacare.ai",
+    action: OFFICIAL_EMAIL,
   },
   {
     icon: ShieldCheck,
     title: "Privacy & data requests",
     body: "Access, correction or deletion requests relating to your personal data.",
-    action: "privacy@dermacare.ai",
+    action: OFFICIAL_EMAIL,
   },
 ];
 
@@ -31,9 +33,11 @@ export default function ContactPage() {
             <MessageCircle className="h-4 w-4" />
             CONTACT
           </div>
+
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
             We are here to help
           </h1>
+
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
             DermaCare AI is an educational prototype. For medical emergencies,
             always contact your local emergency services or a qualified
@@ -44,6 +48,7 @@ export default function ContactPage() {
         <div className="mx-auto grid max-w-5xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {CHANNELS.map((channel) => {
             const Icon = channel.icon;
+
             return (
               <article
                 key={channel.title}
@@ -52,15 +57,21 @@ export default function ContactPage() {
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <Icon className="h-5 w-5" />
                 </span>
+
                 <h2 className="text-base font-semibold text-foreground">
                   {channel.title}
                 </h2>
+
                 <p className="text-sm leading-6 text-muted-foreground">
                   {channel.body}
                 </p>
-                <span className="mt-auto break-all text-sm font-medium text-primary">
+
+                <a
+                  href={`mailto:${channel.action}`}
+                  className="mt-auto break-all text-sm font-medium text-primary transition-colors hover:underline"
+                >
                   {channel.action}
-                </span>
+                </a>
               </article>
             );
           })}
@@ -71,11 +82,13 @@ export default function ContactPage() {
             <h2 className="text-lg font-semibold text-foreground">
               Ready to start a screening?
             </h2>
+
             <p className="mt-1 text-sm text-muted-foreground">
               Create a free account to upload a skin image and get preliminary
               AI insights.
             </p>
           </div>
+
           <div className="flex flex-wrap gap-3">
             <Link
               href="/register"
@@ -84,6 +97,7 @@ export default function ContactPage() {
               Get started
               <ArrowRight className="h-4 w-4" />
             </Link>
+
             <Link
               href="/faq"
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/[0.05] hover:text-primary"

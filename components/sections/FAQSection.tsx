@@ -102,7 +102,7 @@ export default function FAQSection({
                     onClick={() =>
                       setOpenIndex(isOpen ? null : index)
                     }
-                    className="group flex w-full items-center gap-4 p-4 text-left sm:p-5"
+                    className="group flex w-full cursor-pointer  items-center gap-4 p-4 text-left sm:p-5"
                   >
                     <span
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold transition-colors ${
