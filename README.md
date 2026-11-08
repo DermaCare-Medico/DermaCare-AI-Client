@@ -179,11 +179,11 @@ The client is deployed on Vercel. Add the environment variables in the Vercel pr
 
 | Member | Role | GitHub |
 |---|---|---|
-| Nishat Jahan | Team Leader | [@username1](https://github.com/username1) |
-| Yeasin Miazi | Co-Leader | [@username2](https://github.com/username2) |
-| Arafat Hossen Joni | Frontend Developer 1 | [@username3](https://github.com/username3) |
-| Md. Kamruzzam | Frontend Developer 2 | [@username4](https://github.com/username4) |
-| Anamol Hossen | Frontend Developer 3 | [@username5](https://github.com/username5) |
+| Nishat Jahan | Team Leader | [@nishatjahan62](https://github.com/nishatjahan62) |
+| Yeasin Miazi | Co-Leader | [@miazi2003](https://github.com/miazi2003) |
+| Arafat Hossen Joni | Frontend Developer 1 | [@arafat717](https://github.com/arafat717) |
+| Md. Kamruzzam | Frontend Developer 2 | [@anamolhasan](https://github.com/anamolhasan) |
+| Anamol Hossen | Frontend Developer 3 | [@kamrul125](https://github.com/kamrul125) |
 ## License
 
 Educational project. All rights reserved by the team unless a license is added.
