@@ -346,6 +346,14 @@ export const adminApi = baseApi.injectEndpoints({
       providesTags: ["AdminDoctorPayments"],
     }),
 
+    getAdminDoctorPayableDetails: builder.query<Record<string, unknown>, AdminDoctorPayableQuery>({
+      query: ({ doctorId, ...params }) => ({
+        url: `/admin/doctors/${doctorId}/payable`,
+        params: params || undefined,
+      }),
+      providesTags: (_result, _error, arg) => [{ type: "AdminDoctorPayments", id: arg.doctorId }],
+    }),
+
     sendAdminDoctorPayout: builder.mutation<Record<string, unknown>, string>({
       query: (id) => ({
         url: `/admin/doctor-payments/${id}/send`,
@@ -424,6 +432,7 @@ export const {
   useGetAdminDoctorPaymentsQuery,
   useGetAdminDoctorPaymentByIdQuery,
   useGetAdminDoctorPaymentsSummaryQuery,
+  useGetAdminDoctorPayableDetailsQuery,
   useSendAdminDoctorPayoutMutation,
   useGetAdminDoctorPayableConsultationsQuery,
   useGenerateAdminDoctorPayoutMutation,

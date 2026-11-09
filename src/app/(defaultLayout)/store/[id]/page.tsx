@@ -4,13 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, ChevronRight, Minus, PackageCheck, Pill, Plus, ShieldAlert, ShoppingCart } from "lucide-react";
-import { toast } from "sonner";
 
 import { formatMoney } from "@/lib/api/format";
 import { useGetStoreMedicineByIdQuery, useGetStoreMedicinesQuery } from "@/redux/api/publicApi";
-import { useAppDispatch } from "@/redux/hooks";
-import { addToCart } from "@/redux/features/cartSlice";
 import CartSheet from "@/components/shared/CartSheet";
+import AddToCartModal from "@/components/public/AddToCartModal";
 import type { Medicine } from "@/types/doctor";
 
 export default function StoreMedicineDetailPage() {
@@ -18,7 +16,7 @@ export default function StoreMedicineDetailPage() {
   const id = decodeURIComponent(params.id || "");
   const [quantity, setQuantity] = useState(1);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const dispatch = useAppDispatch();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const { data: rawApi, isLoading, isError, refetch } = useGetStoreMedicineByIdQuery(id, { skip: !id });
   const { data: rawCatalog } = useGetStoreMedicinesQuery({ limit: 4 });
@@ -98,21 +96,7 @@ export default function StoreMedicineDetailPage() {
   const maxQuantity = Math.min(medicine.stockQuantity || 10, 10);
 
   const handleAddToCart = () => {
-    dispatch(
-      addToCart({
-        medicineId: medicine.id,
-        name: medicine.name,
-        genericName: medicine.genericName,
-        price: medicine.price,
-        currency: medicine.currency,
-        quantity,
-        requiresPrescription: medicine.requiresPrescription,
-        dosageForm: medicine.dosageForm,
-        strength: medicine.strength,
-      })
-    );
-    toast.success(`Added ${quantity} x ${medicine.name} to cart.`);
-    setIsCartOpen(true);
+    setIsAddModalOpen(true);
   };
 
   return (
@@ -291,6 +275,13 @@ export default function StoreMedicineDetailPage() {
           </section>
         )}
       </div>
+
+      <AddToCartModal
+        medicine={medicine}
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onSuccess={() => setIsCartOpen(true)}
+      />
 
       <CartSheet open={isCartOpen} onOpenChange={setIsCartOpen} />
     </main>

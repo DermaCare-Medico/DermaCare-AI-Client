@@ -24,12 +24,14 @@ import {
 import placeholder from "@/src/assets/placeholders/image_placeholder.png";
 import { useGetMeQuery, useLogoutMutation } from "@/redux/api/authApi";
 import { logout } from "@/redux/features/authSlice";
+import { baseApi } from "@/redux/api/baseApi";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { isDemoAuthEnabled } from "@/src/utils/demoAuth";
 import { dashboardForRole, profileForRole } from "@/src/utils/auth";
 import { readIdentity } from "@/lib/doctor/identity";
 import { useDecodedToken } from "@/src/hooks/useDecodedToken";
 import type { VerificationStatus } from "@/types/doctor";
+import { persistor } from "@/redux/store";
 
 export interface NavUserProps {
   variant?: "sidebar" | "navbar";
@@ -62,6 +64,8 @@ function useNavUserData(onNavigate?: () => void) {
       // Continue client logout even if backend token invalidation encounters an error
     } finally {
       dispatch(logout());
+      dispatch(baseApi.util.resetApiState());
+      await persistor.flush();
       onNavigate?.();
       router.replace("/login?redirect=" + encodeURIComponent(pathname));
     }

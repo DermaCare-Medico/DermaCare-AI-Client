@@ -16,6 +16,7 @@ import { ClipboardEvent, KeyboardEvent, useEffect, useRef, useState } from "reac
 import styles from "../auth.module.css";
 import { useAppDispatch } from "@/redux/hooks";
 import { setSession } from "@/redux/features/authSlice";
+import { baseApi } from "@/redux/api/baseApi";
 import { dashboardForRole, sessionFromResponse } from "@/src/utils/auth";
 import { getDoctorOnboarding } from "@/src/utils/doctorOnboarding";
 import { useRouter } from "next/navigation";
@@ -181,6 +182,7 @@ export default function VerifyEmailPage() {
         );
       }
       if (session) {
+        dispatch(baseApi.util.resetApiState());
         dispatch(setSession({
           ...session,
           user: registrationRole === "DOCTOR"

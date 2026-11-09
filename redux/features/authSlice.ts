@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import Cookies from "js-cookie";
 
 export type AuthUser = { id?: string; name?: string; email?: string; role?: string; [key: string]: unknown };
-interface AuthState { token: string | null; user: AuthUser | null; refreshToken: string | null }
+export interface AuthState { token: string | null; user: AuthUser | null; refreshToken: string | null }
 const initialState: AuthState = { token: null, user: null, refreshToken: null };
 const cookieOptions = () => ({ sameSite: "lax" as const, secure: typeof window !== "undefined" && window.location.protocol === "https:" });
 
@@ -23,6 +23,10 @@ const authSlice = createSlice({
       Cookies.remove("token");
       Cookies.remove("accessToken");
       Cookies.remove("refreshToken");
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("dermacare.checkout.pendingOrderId");
+        window.sessionStorage.removeItem("dermacare.checkout.idempotencyKey");
+      }
     },
   },
 });
