@@ -50,6 +50,13 @@ export const paymentApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: "Payment", id: `appointment-${id}` }],
     }),
 
+    getDoctorPayoutCheckoutStatus: builder.query<ApiEnvelope<PaymentStatus>, { payoutId: string; sessionId: string }>({
+      query: ({ payoutId, sessionId }) => ({
+        url: `/admin/doctor-payments/${payoutId}/checkout-status`,
+        params: { session_id: sessionId },
+      }),
+    }),
+
     createOrderCheckout: builder.mutation<ApiEnvelope<CheckoutData>, string>({
       query: (id) => ({
         url: `/orders/${id}/payments/checkout`,
@@ -70,6 +77,7 @@ export const {
   useCreateAppointmentCheckoutMutation,
   useGetAppointmentPaymentStatusQuery,
   useLazyGetAppointmentPaymentStatusQuery,
+  useLazyGetDoctorPayoutCheckoutStatusQuery,
   useCreateOrderCheckoutMutation,
   useGetOrderPaymentStatusQuery,
   useLazyGetOrderPaymentStatusQuery,

@@ -13,6 +13,7 @@ import { useRef, useState } from "react";
 import type { FieldValues } from "react-hook-form";
 import { useAppDispatch } from "@/redux/hooks";
 import { setSession } from "@/redux/features/authSlice";
+import { baseApi } from "@/redux/api/baseApi";
 import { destinationAfterLogin, sessionFromResponse } from "@/src/utils/auth";
 
 function getApiErrorMessage(error: unknown): string {
@@ -59,6 +60,7 @@ export default function LoginPage() {
       const response = await login({ email, password }).unwrap();
       const session = sessionFromResponse(response);
       if (!session) throw new Error("The server did not return a complete session.");
+      dispatch(baseApi.util.resetApiState());
       dispatch(setSession(session));
       const returnPath = new URLSearchParams(window.location.search).get("redirect");
       window.location.assign(destinationAfterLogin(session.user?.role, returnPath));
