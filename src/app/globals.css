@@ -1,4 +1,5 @@
 @import "tailwindcss";
+\n+[data-slot="dialog-content"].max-w-6xl { max-height: 85vh; overflow-y: auto; }
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -120,4 +121,15 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+[data-slot="dialog-content"].max-w-6xl { max-height: 85vh; overflow-y: auto; }
+[data-slot="dialog-content"].max-w-6xl article { min-width: 0; overflow: hidden; }
+[data-slot="dialog-content"].max-w-6xl article > div:first-child { flex-wrap: wrap; align-items: flex-start; }
+[data-slot="dialog-content"].max-w-6xl article > div:first-child > button { flex-shrink: 0; }
+[data-slot="dialog-content"].max-w-6xl article .grid.grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-slot="dialog-content"].max-w-6xl article .font-mono { overflow-wrap: anywhere; }
+[data-slot="dialog-content"].max-w-6xl div[class*="md:grid-cols-2"] { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 768px) {
+  [data-slot="dialog-content"].max-w-6xl article .grid.grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
